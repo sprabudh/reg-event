@@ -37,6 +37,7 @@ const EventsList = () => {
                     <th style={{ padding: '10px' }}>Name</th>
                     <th style={{ padding: '10px' }}>Date</th>
                     <th style={{ padding: '10px' }}>Capacity</th>
+                    <th style={{ padding: '10px' }}>Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -49,6 +50,11 @@ const EventsList = () => {
                             <td style={{ padding: '10px' }}>{event.name}</td>
                             <td style={{ padding: '10px' }}>{event.date}</td>
                             <td style={{ padding: '10px' }}>{event.capacity}</td>
+                            <td style={{ padding: '10px' }}>
+                                <Link to={`/events/${event.id}`} style={{ padding: '5px 10px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '3px' }}>
+                                    View
+                                </Link>
+                            </td>
                         </tr>
                     ))
                 )}

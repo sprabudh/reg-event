@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import EventsList from './pages/EventsList';
 import CreateEvent from './pages/CreateEvent';
+import EventDetails from './pages/EventDetails';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/events" element={<EventsList />} />
             <Route path="/create-event" element={<CreateEvent />} />
+              <Route path="/events/:id" element={<EventDetails />} />
           </Routes>
         </div>
       </BrowserRouter>
