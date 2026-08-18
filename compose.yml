@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # 1. The Database Service
+  postgres-db:
+    image: postgres:latest
+    container_name: event-postgres-db
+    environment:
+      POSTGRES_USER: eventuser
+      POSTGRES_PASSWORD: eventpass
+      POSTGRES_DB: eventdb
+    ports:
+      - "5433:5432" # Maps the internal port 5432 to your computer's port 5433
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # 2. The Spring Boot Backend Service
+  backend-app:
+    build: .
+    container_name: event-backend-app
+    ports:
+      - "8080:8080"
+    environment:
+      # These environment variables override your application.properties!
+      # Notice we use the service name 'postgres-db' instead of 'localhost'
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/eventdb
+      - SPRING_DATASOURCE_USERNAME=eventuser
+      - SPRING_DATASOURCE_PASSWORD=eventpass
+    depends_on:
+      - postgres-db
+
+# This ensures database data isn't lost if the container stops
+volumes:
+  pgdata:

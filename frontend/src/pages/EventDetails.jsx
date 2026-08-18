@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getEventById } from '../services/eventService';
-import { getAttendeesByEvent, registerAttendee } from '../services/attendeeService';
 import { getAttendeesByEvent, registerAttendee, deleteAttendee } from '../services/attendeeService';
 
 const EventDetails = () => {
