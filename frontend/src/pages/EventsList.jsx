@@ -4,17 +4,19 @@ import { getEvents } from '../services/eventService';
 
 const EventsList = () => {
     const [events, setEvents] = useState([]);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
 
-    // This runs automatically when the page loads
+    // This runs automatically when the page loads OR when currentPage changes
     useEffect(() => {
         loadEvents();
-    }, []);
+    }, [currentPage]);
 
     const loadEvents = () => {
-        getEvents(0, 10) // Fetch page 0, size 10
+        getEvents(currentPage, 5) // Fetching 5 items per page so it's easy to test!
             .then((response) => {
-                // Spring Data JPA puts the array of data inside a "content" field
                 setEvents(response.data.content);
+                setTotalPages(response.data.totalPages);
             })
             .catch((error) => {
                 console.error("Error fetching events:", error);
@@ -42,7 +44,7 @@ const EventsList = () => {
                 </thead>
                 <tbody>
                 {events.length === 0 ? (
-                    <tr><td colSpan="4" style={{ padding: '10px', textAlign: 'center' }}>No events found. Create one!</td></tr>
+                    <tr><td colSpan="5" style={{ padding: '10px', textAlign: 'center' }}>No events found. Create one!</td></tr>
                 ) : (
                     events.map((event) => (
                         <tr key={event.id}>
@@ -60,6 +62,31 @@ const EventsList = () => {
                 )}
                 </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px' }}>
+                    <button
+                        disabled={currentPage === 0}
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        style={{ padding: '8px 15px', cursor: currentPage === 0 ? 'not-allowed' : 'pointer' }}
+                    >
+                        Previous
+                    </button>
+
+                    <span style={{ fontWeight: 'bold' }}>
+                        Page {currentPage + 1} of {totalPages}
+                    </span>
+
+                    <button
+                        disabled={currentPage >= totalPages - 1}
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        style={{ padding: '8px 15px', cursor: currentPage >= totalPages - 1 ? 'not-allowed' : 'pointer' }}
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
