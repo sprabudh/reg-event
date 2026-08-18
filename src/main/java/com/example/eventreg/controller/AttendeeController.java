@@ -18,26 +18,35 @@ public class AttendeeController {
     @Autowired
     private AttendeeService attendeeService;
 
-    // Register a new attendee to a specific event
     @PostMapping("/events/{eventId}/attendees")
-    public ResponseEntity<Attendee> registerAttendee(
-            @PathVariable Long eventId,
-            @Valid @RequestBody Attendee attendee) {
+    public ResponseEntity<Attendee> registerAttendee(@PathVariable Long eventId, @Valid @RequestBody Attendee attendee) {
         Attendee registeredAttendee = attendeeService.registerAttendee(eventId, attendee);
         return new ResponseEntity<>(registeredAttendee, HttpStatus.CREATED);
     }
 
-    // Get all attendees for a specific event (with pagination)
     @GetMapping("/events/{eventId}/attendees")
     public ResponseEntity<Page<Attendee>> getAttendeesByEvent(
             @PathVariable Long eventId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "100") int size) { // Set size to 100 to show all on frontend easily
         Page<Attendee> attendees = attendeeService.getAttendeesByEvent(eventId, PageRequest.of(page, size));
         return ResponseEntity.ok(attendees);
     }
 
-    // Delete an attendee
+    // --- NEW: Get single attendee API ---
+    @GetMapping("/attendees/{id}")
+    public ResponseEntity<Attendee> getAttendeeById(@PathVariable Long id) {
+        Attendee attendee = attendeeService.getAttendeeById(id);
+        return ResponseEntity.ok(attendee);
+    }
+
+    // --- NEW: Update attendee API ---
+    @PutMapping("/attendees/{id}")
+    public ResponseEntity<Attendee> updateAttendee(@PathVariable Long id, @Valid @RequestBody Attendee attendeeDetails) {
+        Attendee updatedAttendee = attendeeService.updateAttendee(id, attendeeDetails);
+        return ResponseEntity.ok(updatedAttendee);
+    }
+
     @DeleteMapping("/attendees/{id}")
     public ResponseEntity<Void> deleteAttendee(@PathVariable Long id) {
         attendeeService.deleteAttendee(id);

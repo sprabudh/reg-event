@@ -19,37 +19,54 @@ public class AttendeeService {
     private AttendeeRepository attendeeRepository;
 
     @Autowired
-    private EventService eventService; // We reuse the Event logic here!
+    private EventService eventService;
 
     @Transactional
     public Attendee registerAttendee(Long eventId, Attendee attendee) {
-        // 1. Find Event (Throws 404 if not found)
         Event event = eventService.getEventById(eventId);
 
-        // 2. Check Capacity (Throws 409 if full)
-        long currentAttendees = attendeeRepository.countByEventId(eventId);
-        if (currentAttendees >= event.getCapacity()) {
+        if (attendeeRepository.countByEventId(eventId) >= event.getCapacity()) {
             throw new EventFullException("Registration failed: Event capacity is full");
         }
 
-        // 3. Check Duplicate Email (Throws 409 if already registered)
         if (attendeeRepository.existsByEmailAndEventId(attendee.getEmail(), eventId)) {
             throw new DuplicateRegistrationException("Registration failed: Email is already registered for this event");
         }
 
-        // 4. Save Attendee
         attendee.setEvent(event);
         return attendeeRepository.save(attendee);
     }
 
     public Page<Attendee> getAttendeesByEvent(Long eventId, Pageable pageable) {
-        eventService.getEventById(eventId); // Validate event exists
+        eventService.getEventById(eventId);
         return attendeeRepository.findByEventId(eventId, pageable);
     }
 
-    public void deleteAttendee(Long id) {
-        Attendee attendee = attendeeRepository.findById(id)
+    // --- NEW: Get a single Attendee by ID ---
+    public Attendee getAttendeeById(Long id) {
+        return attendeeRepository.findById(id)
                 .orElseThrow(() -> new AttendeeNotFoundException("Attendee not found with id: " + id));
+    }
+
+    // --- NEW: Update Attendee ---
+    @Transactional
+    public Attendee updateAttendee(Long id, Attendee attendeeDetails) {
+        Attendee attendee = getAttendeeById(id);
+
+        // Check if they are trying to change to an email that someone else is already using in this event
+        if (!attendee.getEmail().equals(attendeeDetails.getEmail())) {
+            if (attendeeRepository.existsByEmailAndEventId(attendeeDetails.getEmail(), attendee.getEvent().getId())) {
+                throw new DuplicateRegistrationException("Update failed: Email is already registered for this event");
+            }
+        }
+
+        attendee.setName(attendeeDetails.getName());
+        attendee.setEmail(attendeeDetails.getEmail());
+        return attendeeRepository.save(attendee);
+    }
+
+    public void deleteAttendee(Long id) {
+        Attendee attendee = getAttendeeById(id);
         attendeeRepository.delete(attendee);
     }
 }

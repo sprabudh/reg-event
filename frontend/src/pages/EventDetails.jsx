@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getEventById } from '../services/eventService';
 import { getAttendeesByEvent, registerAttendee } from '../services/attendeeService';
+import { getAttendeesByEvent, registerAttendee, deleteAttendee } from '../services/attendeeService';
 
 const EventDetails = () => {
     // This grabs the ID from the URL (e.g., /events/1)
@@ -58,6 +59,17 @@ const EventDetails = () => {
             });
     };
 
+    const handleDeleteAttendee = (attendeeId) => {
+        if (window.confirm("Are you sure you want to remove this attendee?")) {
+            deleteAttendee(attendeeId)
+                .then(() => {
+                    loadEventDetails(); // Reload to update available seats
+                    loadAttendees(); // Refresh the list
+                })
+                .catch(err => console.error("Failed to delete attendee", err));
+        }
+    };
+
     if (!event) return <div style={{ padding: '20px' }}>Loading event details...</div>;
 
     const availableSeats = event.capacity - attendees.length;
@@ -112,6 +124,7 @@ const EventDetails = () => {
                             <tr style={{ backgroundColor: '#f2f2f2', textAlign: 'left' }}>
                                 <th style={{ padding: '8px' }}>Name</th>
                                 <th style={{ padding: '8px' }}>Email</th>
+                                <th style={{ padding: '8px' }}>Actions</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -119,6 +132,10 @@ const EventDetails = () => {
                                 <tr key={a.id}>
                                     <td style={{ padding: '8px' }}>{a.name}</td>
                                     <td style={{ padding: '8px' }}>{a.email}</td>
+                                    <td style={{ padding: '8px', display: 'flex', gap: '5px' }}>
+                                        <Link to={`/edit-attendee/${a.id}`} style={{ padding: '4px 8px', backgroundColor: '#ffc107', color: 'black', textDecoration: 'none', borderRadius: '3px', fontSize: '12px' }}>Edit</Link>
+                                        <button onClick={() => handleDeleteAttendee(a.id)} style={{ padding: '4px 8px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
+                                    </td>
                                 </tr>
                             ))}
                             </tbody>

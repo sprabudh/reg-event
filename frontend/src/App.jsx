@@ -5,6 +5,7 @@ import EventsList from './pages/EventsList';
 import CreateEvent from './pages/CreateEvent';
 import EventDetails from './pages/EventDetails';
 import EditEvent from './pages/EditEvent';
+import EditAttendee from './pages/EditAttendee';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
             <Route path="/create-event" element={<CreateEvent />} />
               <Route path="/events/:id" element={<EventDetails />} />
               <Route path="/edit-event/:id" element={<EditEvent />} />
+              <Route path="/edit-attendee/:id" element={<EditAttendee />} />
           </Routes>
         </div>
       </BrowserRouter>
