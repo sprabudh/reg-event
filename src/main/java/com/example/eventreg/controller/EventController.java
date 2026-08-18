@@ -26,9 +26,10 @@ public class EventController {
 
     @GetMapping
     public ResponseEntity<Page<Event>> getAllEvents(
+            @RequestParam(required = false) String name, // Added filter parameter
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Page<Event> events = eventService.getAllEvents(PageRequest.of(page, size));
+        Page<Event> events = eventService.getAllEvents(name, PageRequest.of(page, size));
         return ResponseEntity.ok(events);
     }
 

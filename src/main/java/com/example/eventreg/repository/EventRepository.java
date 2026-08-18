@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
+    // Allows searching for events by name, ignoring case, with pagination
+    Page<Event> findByNameContainingIgnoreCase(String name, Pageable pageable);
 }

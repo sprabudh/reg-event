@@ -21,7 +21,7 @@ public class GlobalExceptionHandler {
     }
 
     // 2. Catches 409 Conflict errors (Event Full or Duplicate Email)
-    @ExceptionHandler({EventFullException.class, DuplicateRegistrationException.class})
+    @ExceptionHandler({EventFullException.class, DuplicateRegistrationException.class, EventDeletionException.class})
     public ResponseEntity<Map<String, Object>> handleConflictException(RuntimeException ex) {
         return buildErrorResponse(ex.getMessage(), HttpStatus.CONFLICT);
     }

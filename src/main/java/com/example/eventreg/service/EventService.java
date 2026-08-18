@@ -1,7 +1,9 @@
 package com.example.eventreg.service;
 
 import com.example.eventreg.entity.Event;
+import com.example.eventreg.exception.EventDeletionException;
 import com.example.eventreg.exception.EventNotFoundException;
+import com.example.eventreg.repository.AttendeeRepository;
 import com.example.eventreg.repository.EventRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -14,11 +16,18 @@ public class EventService {
     @Autowired
     private EventRepository eventRepository;
 
+    @Autowired
+    private AttendeeRepository attendeeRepository; // Added this!
+
     public Event createEvent(Event event) {
         return eventRepository.save(event);
     }
 
-    public Page<Event> getAllEvents(Pageable pageable) {
+    // Updated to support mandatory Filtering!
+    public Page<Event> getAllEvents(String name, Pageable pageable) {
+        if (name != null && !name.isEmpty()) {
+            return eventRepository.findByNameContainingIgnoreCase(name, pageable);
+        }
         return eventRepository.findAll(pageable);
     }
 
@@ -37,6 +46,12 @@ public class EventService {
 
     public void deleteEvent(Long id) {
         Event event = getEventById(id);
+
+        // Fulfilling Edge Case 7: Reject deletion if attendees exist
+        if (attendeeRepository.countByEventId(id) > 0) {
+            throw new EventDeletionException("Cannot delete event because attendees are currently registered.");
+        }
+
         eventRepository.delete(event);
     }
 }
