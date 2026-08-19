@@ -21,7 +21,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
-    private final AuthenticationProvider authenticationProvider; // We grab this from the new ApplicationConfig!
+    private final AuthenticationProvider authenticationProvider;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -29,19 +29,17 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // Login/Register are public
+                        .requestMatchers("/api/auth/**").permitAll()
 
-                        // --- STRICT ROLE-BASED ACCESS CONTROL (RBAC) ---
-                        // Only Admins can modify Events
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/events/*/attendees").authenticated()
+
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/events/**").hasAuthority("ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/events/**").hasAuthority("ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/events/**").hasAuthority("ADMIN")
 
-                        // Only Admins can edit or delete Attendees
+                        // Admins only for editing attendees. (We removed DELETE so users can cancel their own!)
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/attendees/**").hasAuthority("ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/attendees/**").hasAuthority("ADMIN")
 
-                        // Everyone else who is logged in can view events and register themselves
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
