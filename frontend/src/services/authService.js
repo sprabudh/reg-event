@@ -32,3 +32,7 @@ export const getUserEmail = () => {
         return null;
     }
 };
+
+export const registerAdmin = (userData) => {
+    return api.post('/auth/register-admin', userData);
+};
