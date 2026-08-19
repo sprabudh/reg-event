@@ -32,5 +32,6 @@ public class AuthModels {
     @NoArgsConstructor
     public static class AuthenticationResponse {
         private String token;
+        private String role;
     }
 }

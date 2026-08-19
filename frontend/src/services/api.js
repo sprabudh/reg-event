@@ -1,8 +1,18 @@
 import axios from 'axios';
 
-// This creates a base instance so we don't have to type localhost:8080 every time
 const api = axios.create({
     baseURL: 'http://localhost:8080/api',
+});
+
+// This "interceptor" runs before every single request
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+}, (error) => {
+    return Promise.reject(error);
 });
 
 export default api;

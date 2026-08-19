@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getEvents, deleteEvent } from '../services/eventService';
+import { getUserRole } from '../services/authService';
 
 const EventsList = () => {
     const [events, setEvents] = useState([]);
@@ -9,23 +10,26 @@ const EventsList = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
 
+    // This grabs the role of the logged-in user!
+    const userRole = getUserRole();
+
     useEffect(() => {
         loadEvents();
-    }, [currentPage]); // Reloads when page changes
+    }, [currentPage]);
 
     const loadEvents = () => {
         getEvents(currentPage, 5, searchTerm)
             .then((response) => {
                 setEvents(response.data.content);
                 setTotalPages(response.data.totalPages);
-                setErrorMessage(''); // Clear errors on successful load
+                setErrorMessage('');
             })
             .catch((error) => console.error("Error fetching events:", error));
     };
 
     const handleSearch = (e) => {
         e.preventDefault();
-        setCurrentPage(0); // Reset to first page when searching
+        setCurrentPage(0);
         loadEvents();
     };
 
@@ -33,10 +37,9 @@ const EventsList = () => {
         if (window.confirm("Are you sure you want to delete this event?")) {
             deleteEvent(id)
                 .then(() => {
-                    loadEvents(); // Reload table after deletion
+                    loadEvents();
                 })
                 .catch((error) => {
-                    // This catches our 409 Conflict if attendees are registered!
                     if (error.response && error.response.data) {
                         setErrorMessage(error.response.data.message);
                     } else {
@@ -50,12 +53,15 @@ const EventsList = () => {
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2>All Events</h2>
-                <Link to="/create-event" style={{ padding: '10px', backgroundColor: '#28a745', color: 'white', textDecoration: 'none', borderRadius: '5px' }}>
-                    + Create Event
-                </Link>
+
+                {/* Only display the Create Event button if the user is an ADMIN */}
+                {userRole === 'ADMIN' && (
+                    <Link to="/create-event" style={{ padding: '10px', backgroundColor: '#28a745', color: 'white', textDecoration: 'none', borderRadius: '5px' }}>
+                        + Create Event
+                    </Link>
+                )}
             </div>
 
-            {/* Fulfilling Mandatory Filtering Requirement */}
             <form onSubmit={handleSearch} style={{ margin: '20px 0', display: 'flex', gap: '10px' }}>
                 <input
                     type="text"
@@ -91,9 +97,18 @@ const EventsList = () => {
                             <td style={{ padding: '10px' }}>{event.date}</td>
                             <td style={{ padding: '10px' }}>{event.capacity}</td>
                             <td style={{ padding: '10px', display: 'flex', gap: '5px' }}>
+
+                                {/* Everyone can view the event */}
                                 <Link to={`/events/${event.id}`} style={{ padding: '5px 10px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '3px' }}>View</Link>
-                                <Link to={`/edit-event/${event.id}`} style={{ padding: '5px 10px', backgroundColor: '#ffc107', color: 'black', textDecoration: 'none', borderRadius: '3px' }}>Edit</Link>
-                                <button onClick={() => handleDelete(event.id)} style={{ padding: '5px 10px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>Delete</button>
+
+                                {/* Only ADMINs can Edit or Delete the event */}
+                                {userRole === 'ADMIN' && (
+                                    <>
+                                        <Link to={`/edit-event/${event.id}`} style={{ padding: '5px 10px', backgroundColor: '#ffc107', color: 'black', textDecoration: 'none', borderRadius: '3px' }}>Edit</Link>
+                                        <button onClick={() => handleDelete(event.id)} style={{ padding: '5px 10px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>Delete</button>
+                                    </>
+                                )}
+
                             </td>
                         </tr>
                     ))

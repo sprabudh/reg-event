@@ -2,18 +2,19 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getEventById } from '../services/eventService';
 import { getAttendeesByEvent, registerAttendee, deleteAttendee } from '../services/attendeeService';
+import { getUserRole } from '../services/authService';
 
 const EventDetails = () => {
-    // This grabs the ID from the URL (e.g., /events/1)
     const { id } = useParams();
 
     const [event, setEvent] = useState(null);
     const [attendees, setAttendees] = useState([]);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-
-    // Form state for new attendee
     const [formData, setFormData] = useState({ name: '', email: '' });
+
+    // Grab the role for the attendees list
+    const userRole = getUserRole();
 
     useEffect(() => {
         loadEventDetails();
@@ -27,7 +28,7 @@ const EventDetails = () => {
     };
 
     const loadAttendees = () => {
-        getAttendeesByEvent(id, 0, 100) // Getting up to 100 attendees for the demo
+        getAttendeesByEvent(id, 0, 100)
             .then(res => setAttendees(res.data.content))
             .catch(err => console.error("Error fetching attendees:", err));
     };
@@ -44,12 +45,11 @@ const EventDetails = () => {
         registerAttendee(id, formData)
             .then(() => {
                 setSuccess('Successfully registered!');
-                setFormData({ name: '', email: '' }); // Clear form
-                loadEventDetails(); // Reload to update available seats
-                loadAttendees(); // Reload the list to show the new person
+                setFormData({ name: '', email: '' });
+                loadEventDetails();
+                loadAttendees();
             })
             .catch((err) => {
-                // This catches our custom Spring Boot backend errors! (409 Conflict)
                 if (err.response && err.response.data && err.response.data.message) {
                     setError(err.response.data.message);
                 } else {
@@ -62,8 +62,8 @@ const EventDetails = () => {
         if (window.confirm("Are you sure you want to remove this attendee?")) {
             deleteAttendee(attendeeId)
                 .then(() => {
-                    loadEventDetails(); // Reload to update available seats
-                    loadAttendees(); // Refresh the list
+                    loadEventDetails();
+                    loadAttendees();
                 })
                 .catch(err => console.error("Failed to delete attendee", err));
         }
@@ -132,8 +132,15 @@ const EventDetails = () => {
                                     <td style={{ padding: '8px' }}>{a.name}</td>
                                     <td style={{ padding: '8px' }}>{a.email}</td>
                                     <td style={{ padding: '8px', display: 'flex', gap: '5px' }}>
-                                        <Link to={`/edit-attendee/${a.id}`} style={{ padding: '4px 8px', backgroundColor: '#ffc107', color: 'black', textDecoration: 'none', borderRadius: '3px', fontSize: '12px' }}>Edit</Link>
-                                        <button onClick={() => handleDeleteAttendee(a.id)} style={{ padding: '4px 8px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
+
+                                        {/* Only ADMINs see Edit and Delete for attendees */}
+                                        {userRole === 'ADMIN' && (
+                                            <>
+                                                <Link to={`/edit-attendee/${a.id}`} style={{ padding: '4px 8px', backgroundColor: '#ffc107', color: 'black', textDecoration: 'none', borderRadius: '3px', fontSize: '12px' }}>Edit</Link>
+                                                <button onClick={() => handleDeleteAttendee(a.id)} style={{ padding: '4px 8px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
+                                            </>
+                                        )}
+
                                     </td>
                                 </tr>
                             ))}

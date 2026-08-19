@@ -19,17 +19,28 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
+    // Normal User Registration
     public AuthModels.AuthenticationResponse register(AuthModels.RegisterRequest request) {
+        return createAccount(request, Role.USER);
+    }
+
+    // Secret Admin Registration!
+    public AuthModels.AuthenticationResponse registerAdmin(AuthModels.RegisterRequest request) {
+        return createAccount(request, Role.ADMIN);
+    }
+
+    private AuthModels.AuthenticationResponse createAccount(AuthModels.RegisterRequest request, Role role) {
         var user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER) // Default role
+                .role(role)
                 .build();
         repository.save(user);
         var jwtToken = jwtService.generateToken(user);
         return AuthModels.AuthenticationResponse.builder()
                 .token(jwtToken)
+                .role(user.getRole().name()) // Send the role to React!
                 .build();
     }
 
@@ -41,6 +52,7 @@ public class AuthService {
         var jwtToken = jwtService.generateToken(user);
         return AuthModels.AuthenticationResponse.builder()
                 .token(jwtToken)
+                .role(user.getRole().name()) // Send the role to React!
                 .build();
     }
 }
