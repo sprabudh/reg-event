@@ -12,12 +12,10 @@ const EventDetails = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [formData, setFormData] = useState({ name: '', email: '' });
-
-    // NEW: Search state
     const [searchTerm, setSearchTerm] = useState('');
 
     const userRole = getUserRole();
-    const userEmail = getUserEmail(); // Grab the logged-in email!
+    const userEmail = getUserEmail();
 
     useEffect(() => {
         loadEventDetails();
@@ -25,157 +23,116 @@ const EventDetails = () => {
     }, [id]);
 
     const loadEventDetails = () => {
-        getEventById(id)
-            .then(res => setEvent(res.data))
-            .catch(err => console.error("Error fetching event:", err));
+        getEventById(id).then(res => setEvent(res.data)).catch(err => console.error(err));
     };
 
     const loadAttendees = () => {
-        getAttendeesByEvent(id, 0, 100)
-            .then(res => setAttendees(res.data.content))
-            .catch(err => console.error("Error fetching attendees:", err));
+        getAttendeesByEvent(id, 0, 100).then(res => setAttendees(res.data.content)).catch(err => console.error(err));
     };
 
-    const handleInputChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+    const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
     const handleRegister = (e) => {
         e.preventDefault();
-        setError('');
-        setSuccess('');
-
+        setError(''); setSuccess('');
         registerAttendee(id, formData)
             .then(() => {
                 setSuccess('Successfully registered!');
                 setFormData({ name: '', email: '' });
-                loadEventDetails();
-                loadAttendees();
+                loadEventDetails(); loadAttendees();
             })
             .catch((err) => {
-                if (err.response && err.response.data && err.response.data.message) {
-                    setError(err.response.data.message);
-                } else {
-                    setError('Registration failed. Please try again.');
-                }
+                setError(err.response?.data?.message || 'Registration failed. Please try again.');
             });
     };
 
     const handleDeleteAttendee = (attendeeId) => {
-        const message = userRole === 'ADMIN' ? "Are you sure you want to remove this attendee?" : "Are you sure you want to cancel your registration?";
+        const message = userRole === 'ADMIN' ? "Remove this attendee?" : "Cancel your registration?";
         if (window.confirm(message)) {
-            deleteAttendee(attendeeId)
-                .then(() => {
-                    loadEventDetails();
-                    loadAttendees();
-                })
-                .catch(err => console.error("Failed to delete attendee", err));
+            deleteAttendee(attendeeId).then(() => { loadEventDetails(); loadAttendees(); }).catch(console.error);
         }
     };
 
-    if (!event) return <div style={{ padding: '20px' }}>Loading event details...</div>;
+    if (!event) return <div style={{ padding: '20px' }}>Loading...</div>;
 
     const availableSeats = event.capacity - attendees.length;
-
-    // NEW: Filter the attendees list based on the search term
     const filteredAttendees = attendees.filter(a =>
         a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
-    // NEW: Only show the Actions column if the user is an ADMIN, OR if their email is in the currently visible list!
     const showActionsColumn = userRole === 'ADMIN' || filteredAttendees.some(a => a.email === userEmail);
 
     return (
         <div>
-            <Link to="/events" style={{ textDecoration: 'none', color: '#61dafb' }}>← Back to Events</Link>
+            <Link to="/events" style={{ textDecoration: 'none', color: '#64748B', fontWeight: '500', marginBottom: '20px', display: 'inline-block' }}>← Back to Events</Link>
 
-            <div style={{ backgroundColor: '#f9f9f9', padding: '20px', marginTop: '20px', borderRadius: '8px' }}>
-                <h2 style={{ margin: '0 0 10px 0' }}>{event.name}</h2>
-                <p><strong>Date:</strong> {event.date}</p>
-                <p><strong>Total Capacity:</strong> {event.capacity}</p>
-                <p><strong>Registered:</strong> {attendees.length}</p>
-                <p><strong>Available Seats:</strong> <span style={{ color: availableSeats === 0 ? 'red' : 'green', fontWeight: 'bold' }}>{availableSeats}</span></p>
+            <div className="card" style={{ marginBottom: '30px' }}>
+                <h2 style={{ margin: '0 0 15px 0' }}>{event.name}</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '14px' }}>
+                    <p style={{ margin: '5px 0' }}><strong>Date:</strong> {event.date}</p>
+                    <p style={{ margin: '5px 0' }}><strong>Total Capacity:</strong> {event.capacity}</p>
+                    <p style={{ margin: '5px 0' }}><strong>Registered:</strong> {attendees.length}</p>
+                    <p style={{ margin: '5px 0' }}><strong>Available Seats:</strong> <span style={{ color: availableSeats === 0 ? '#EF4444' : '#10B981', fontWeight: 'bold' }}>{availableSeats}</span></p>
+                </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '40px', marginTop: '30px' }}>
+            <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
+                <div className="card" style={{ flex: '1', minWidth: '300px', alignSelf: 'flex-start' }}>
+                    <h3 style={{ marginTop: 0 }}>Register</h3>
 
-                {/* Registration Form */}
-                <div style={{ flex: 1, padding: '20px', border: '1px solid #ccc', borderRadius: '8px', maxHeight: '350px' }}>
-                    <h3>Register for this Event</h3>
-
-                    {error && <div style={{ color: 'white', backgroundColor: '#ff4d4d', padding: '10px', marginBottom: '15px', borderRadius: '4px' }}>❌ {error}</div>}
-                    {success && <div style={{ color: 'white', backgroundColor: '#28a745', padding: '10px', marginBottom: '15px', borderRadius: '4px' }}>✅ {success}</div>}
+                    {error && <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>{error}</div>}
+                    {success && <div style={{ backgroundColor: '#D1FAE5', color: '#047857', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>{success}</div>}
 
                     {availableSeats === 0 ? (
-                        <p style={{ color: 'red', fontWeight: 'bold' }}>Registration is closed. This event is at full capacity.</p>
+                        <p style={{ color: '#EF4444', fontWeight: 'bold' }}>Registration closed.</p>
                     ) : (
                         <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             <div>
-                                <label>Full Name:</label><br/>
-                                <input type="text" name="name" value={formData.name} onChange={handleInputChange} required style={{ width: '100%', padding: '8px' }} />
+                                <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>Full Name</label>
+                                <input type="text" name="name" value={formData.name} onChange={handleInputChange} required />
                             </div>
                             <div>
-                                <label>Email Address:</label><br/>
-                                <input type="email" name="email" value={formData.email} onChange={handleInputChange} required style={{ width: '100%', padding: '8px' }} />
+                                <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>Email Address</label>
+                                <input type="email" name="email" value={formData.email} onChange={handleInputChange} required />
                             </div>
-                            <button type="submit" style={{ padding: '10px', backgroundColor: '#61dafb', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-                                Register Now
-                            </button>
+                            <button type="submit" className="btn" style={{ marginTop: '10px' }}>Register Now</button>
                         </form>
                     )}
                 </div>
 
-                {/* Attendees List */}
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: '2', minWidth: '400px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                        <h3 style={{ margin: 0 }}>Registered Attendees</h3>
-                        {/* Live Search Bar */}
-                        <input
-                            type="text"
-                            placeholder="Search attendees..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            style={{ padding: '8px', width: '200px', borderRadius: '4px', border: '1px solid #ccc' }}
-                        />
+                        <h3 style={{ margin: 0 }}>Attendees</h3>
+                        <input type="text" placeholder="Search attendees..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: '200px' }} />
                     </div>
 
                     {filteredAttendees.length === 0 ? (
-                        <p>No attendees match your search.</p>
+                        <p style={{ color: '#64748B' }}>No attendees found.</p>
                     ) : (
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }} border="1">
+                        <table>
                             <thead>
-                            <tr style={{ backgroundColor: '#f2f2f2', textAlign: 'left' }}>
-                                <th style={{ padding: '8px' }}>Name</th>
-                                <th style={{ padding: '8px' }}>Email</th>
-
-                                {/* Conditionally render the header */}
-                                {showActionsColumn && <th style={{ padding: '8px' }}>Actions</th>}
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                {showActionsColumn && <th>Actions</th>}
                             </tr>
                             </thead>
                             <tbody>
                             {filteredAttendees.map(a => (
                                 <tr key={a.id}>
-                                    <td style={{ padding: '8px' }}>{a.name}</td>
-                                    <td style={{ padding: '8px' }}>{a.email}</td>
-
-                                    {/* Conditionally render the data cell */}
+                                    <td>{a.name}</td>
+                                    <td>{a.email}</td>
                                     {showActionsColumn && (
-                                        <td style={{ padding: '8px', display: 'flex', gap: '5px' }}>
-
-                                            {/* ADMIN sees Edit and Delete */}
+                                        <td>
                                             {userRole === 'ADMIN' && (
                                                 <>
-                                                    <Link to={`/edit-attendee/${a.id}`} style={{ padding: '4px 8px', backgroundColor: '#ffc107', color: 'black', textDecoration: 'none', borderRadius: '3px', fontSize: '12px' }}>Edit</Link>
-                                                    <button onClick={() => handleDeleteAttendee(a.id)} style={{ padding: '4px 8px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
+                                                    <Link to={`/edit-attendee/${a.id}`} className="btn btn-small btn-secondary">Edit</Link>
+                                                    <button onClick={() => handleDeleteAttendee(a.id)} className="btn btn-small btn-danger">Delete</button>
                                                 </>
                                             )}
-
-                                            {/* NORMAL USER only sees "Cancel" if it is THEIR email */}
                                             {userRole !== 'ADMIN' && a.email === userEmail && (
-                                                <button onClick={() => handleDeleteAttendee(a.id)} style={{ padding: '4px 8px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' }}>Cancel Registration</button>
+                                                <button onClick={() => handleDeleteAttendee(a.id)} className="btn btn-small btn-danger">Cancel</button>
                                             )}
-
                                         </td>
                                     )}
                                 </tr>

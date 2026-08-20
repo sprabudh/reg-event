@@ -12,7 +12,7 @@ const Navbar = () => {
     return (
         <nav style={{ padding: '15px 30px', backgroundColor: '#282c34', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-                <h2 style={{ margin: '0 30px 0 0' }}>EventReg System</h2>
+                <h2 style={{ margin: '0 30px 0 0', color: '#FFFFFF' }}>Eventora</h2>
                 {loggedIn && (
                     <>
                         <Link to="/" style={{ color: '#61dafb', textDecoration: 'none', marginRight: '20px', fontSize: '18px' }}>Dashboard</Link>

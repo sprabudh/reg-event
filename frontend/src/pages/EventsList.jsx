@@ -10,7 +10,6 @@ const EventsList = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
 
-    // This grabs the role of the logged-in user!
     const userRole = getUserRole();
 
     useEffect(() => {
@@ -36,9 +35,7 @@ const EventsList = () => {
     const handleDelete = (id) => {
         if (window.confirm("Are you sure you want to delete this event?")) {
             deleteEvent(id)
-                .then(() => {
-                    loadEvents();
-                })
+                .then(() => loadEvents())
                 .catch((error) => {
                     if (error.response && error.response.data) {
                         setErrorMessage(error.response.data.message);
@@ -51,64 +48,56 @@ const EventsList = () => {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2>All Events</h2>
-
-                {/* Only display the Create Event button if the user is an ADMIN */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2>Event coming up...</h2>
                 {userRole === 'ADMIN' && (
-                    <Link to="/create-event" style={{ padding: '10px', backgroundColor: '#28a745', color: 'white', textDecoration: 'none', borderRadius: '5px' }}>
-                        + Create Event
-                    </Link>
+                    <Link to="/create-event" className="btn">+ Create Event</Link>
                 )}
             </div>
 
-            <form onSubmit={handleSearch} style={{ margin: '20px 0', display: 'flex', gap: '10px' }}>
+            <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
                 <input
                     type="text"
                     placeholder="Search events by name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{ padding: '8px', width: '300px' }}
+                    style={{ maxWidth: '300px' }}
                 />
-                <button type="submit" style={{ padding: '8px 15px', backgroundColor: '#61dafb', border: 'none', cursor: 'pointer' }}>Search</button>
-                <button type="button" onClick={() => { setSearchTerm(''); setCurrentPage(0); setTimeout(loadEvents, 100); }} style={{ padding: '8px 15px', cursor: 'pointer' }}>Clear</button>
+                <button type="submit" className="btn">Search</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setSearchTerm(''); setCurrentPage(0); setTimeout(loadEvents, 100); }}>Clear</button>
             </form>
 
-            {errorMessage && <div style={{ backgroundColor: '#ff4d4d', color: 'white', padding: '10px', marginBottom: '15px', borderRadius: '5px' }}>⚠️ {errorMessage}</div>}
+            {errorMessage && <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>⚠️ {errorMessage}</div>}
 
-            <table style={{ width: '100%', borderCollapse: 'collapse' }} border="1">
+            <table>
                 <thead>
-                <tr style={{ backgroundColor: '#f2f2f2', textAlign: 'left' }}>
-                    <th style={{ padding: '10px' }}>ID</th>
-                    <th style={{ padding: '10px' }}>Name</th>
-                    <th style={{ padding: '10px' }}>Date</th>
-                    <th style={{ padding: '10px' }}>Capacity</th>
-                    <th style={{ padding: '10px' }}>Actions</th>
+                <tr>
+                    <th>ID</th>
+                    <th>Event Name</th>
+                    <th>Date</th>
+                    <th>Capacity</th>
+                    <th>Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 {events.length === 0 ? (
-                    <tr><td colSpan="5" style={{ padding: '10px', textAlign: 'center' }}>No events found.</td></tr>
+                    <tr><td colSpan="5" style={{ textAlign: 'center' }}>No events found.</td></tr>
                 ) : (
                     events.map((event) => (
                         <tr key={event.id}>
-                            <td style={{ padding: '10px' }}>{event.id}</td>
-                            <td style={{ padding: '10px' }}>{event.name}</td>
-                            <td style={{ padding: '10px' }}>{event.date}</td>
-                            <td style={{ padding: '10px' }}>{event.capacity}</td>
-                            <td style={{ padding: '10px', display: 'flex', gap: '5px' }}>
+                            <td>{event.id}</td>
+                            <td>{event.name}</td>
+                            <td>{event.date}</td>
+                            <td>{event.capacity}</td>
+                            <td>
+                                <Link to={`/events/${event.id}`} className="btn btn-small">View</Link>
 
-                                {/* Everyone can view the event */}
-                                <Link to={`/events/${event.id}`} style={{ padding: '5px 10px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '3px' }}>View</Link>
-
-                                {/* Only ADMINs can Edit or Delete the event */}
                                 {userRole === 'ADMIN' && (
                                     <>
-                                        <Link to={`/edit-event/${event.id}`} style={{ padding: '5px 10px', backgroundColor: '#ffc107', color: 'black', textDecoration: 'none', borderRadius: '3px' }}>Edit</Link>
-                                        <button onClick={() => handleDelete(event.id)} style={{ padding: '5px 10px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>Delete</button>
+                                        <Link to={`/edit-event/${event.id}`} className="btn btn-small btn-secondary">Edit</Link>
+                                        <button onClick={() => handleDelete(event.id)} className="btn btn-small btn-danger">Delete</button>
                                     </>
                                 )}
-
                             </td>
                         </tr>
                     ))
@@ -116,12 +105,11 @@ const EventsList = () => {
                 </tbody>
             </table>
 
-            {/* Pagination Controls */}
             {totalPages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px' }}>
-                    <button disabled={currentPage === 0} onClick={() => setCurrentPage(currentPage - 1)} style={{ padding: '8px 15px', cursor: currentPage === 0 ? 'not-allowed' : 'pointer' }}>Previous</button>
-                    <span style={{ fontWeight: 'bold' }}>Page {currentPage + 1} of {totalPages}</span>
-                    <button disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(currentPage + 1)} style={{ padding: '8px 15px', cursor: currentPage >= totalPages - 1 ? 'not-allowed' : 'pointer' }}>Next</button>
+                    <button className="btn btn-secondary" disabled={currentPage === 0} onClick={() => setCurrentPage(currentPage - 1)}>Previous</button>
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>Page {currentPage + 1} of {totalPages}</span>
+                    <button className="btn btn-secondary" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(currentPage + 1)}>Next</button>
                 </div>
             )}
         </div>
