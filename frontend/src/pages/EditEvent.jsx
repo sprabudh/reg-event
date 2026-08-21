@@ -11,7 +11,7 @@ const EditEvent = () => {
     useEffect(() => {
         getEventById(id)
             .then(res => setFormData(res.data))
-            .catch(err => setError("Failed to load event data."));
+            .catch(() => setError("Failed to load event data."));
     }, [id]);
 
     const handleChange = (e) => {
@@ -22,7 +22,7 @@ const EditEvent = () => {
         e.preventDefault();
         updateEvent(id, formData)
             .then(() => navigate('/events'))
-            .catch(err => setError('Failed to update event. Check your inputs.'));
+            .catch(() => setError('Failed to update event. Check your inputs.'));
     };
 
     return (
@@ -44,7 +44,6 @@ const EditEvent = () => {
                             value={formData.name}
                             onChange={handleChange}
                             style={styles.input}
-                            placeholder="e.g., Annual Tech Conference"
                             required
                         />
                     </div>
@@ -69,7 +68,6 @@ const EditEvent = () => {
                             value={formData.capacity}
                             onChange={handleChange}
                             style={styles.input}
-                            placeholder="e.g., 100"
                             required min="1"
                         />
                     </div>
@@ -83,7 +81,7 @@ const EditEvent = () => {
     );
 };
 
-// Extracted styles object for cleaner JSX
+// Standard layout styles matching CreateEvent
 const styles = {
     pageContainer: {
         display: 'flex',
@@ -147,7 +145,6 @@ const styles = {
         fontSize: '15px',
         color: '#111827',
         outline: 'none',
-        transition: 'border-color 0.2s',
         boxSizing: 'border-box',
     },
     button: {
@@ -161,7 +158,6 @@ const styles = {
         fontWeight: '600',
         cursor: 'pointer',
         boxShadow: '0 4px 6px rgba(79, 70, 229, 0.2)',
-        transition: 'background-color 0.2s',
     }
 };
 

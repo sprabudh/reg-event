@@ -15,4 +15,5 @@ public class AttendeeResponse {
     private LocalDateTime registrationDate;
     private Long eventId;
     private String eventName; // Helpful to show the event name alongside the user
+    private String status;
 }

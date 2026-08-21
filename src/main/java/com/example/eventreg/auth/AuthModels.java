@@ -33,5 +33,6 @@ public class AuthModels {
     public static class AuthenticationResponse {
         private String token;
         private String role;
+        private String name; // <--- ADDED THIS: Now the builder in AuthService will work!
     }
 }

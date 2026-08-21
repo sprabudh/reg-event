@@ -41,4 +41,8 @@ public class Attendee {
     @JoinColumn(name = "event_id", nullable = false)
     @JsonIgnore // Prevents infinite loops when retrieving data
     private Event event;
+
+    // This is now properly INSIDE the class!
+    @Enumerated(EnumType.STRING)
+    private RegistrationStatus status;
 }

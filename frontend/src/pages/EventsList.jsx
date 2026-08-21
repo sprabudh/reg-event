@@ -12,9 +12,10 @@ const EventsList = () => {
 
     const userRole = getUserRole();
 
+    // The Magic Fix: React now watches both currentPage AND searchTerm
     useEffect(() => {
         loadEvents();
-    }, [currentPage]);
+    }, [currentPage, searchTerm]);
 
     const loadEvents = () => {
         getEvents(currentPage, 5, searchTerm)
@@ -24,12 +25,6 @@ const EventsList = () => {
                 setErrorMessage('');
             })
             .catch((error) => console.error("Error fetching events:", error));
-    };
-
-    const handleSearch = (e) => {
-        e.preventDefault();
-        setCurrentPage(0);
-        loadEvents();
     };
 
     const handleDelete = (id) => {
@@ -55,17 +50,33 @@ const EventsList = () => {
                 )}
             </div>
 
-            <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            {/* Changed from a form to a div for clean Live Search */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
                 <input
                     type="text"
                     placeholder="Search events by name..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(0); // Snaps back to page 0 to prevent pagination bugs
+                    }}
                     style={{ maxWidth: '300px' }}
                 />
-                <button type="submit" className="btn">Search</button>
-                <button type="button" className="btn btn-secondary" onClick={() => { setSearchTerm(''); setCurrentPage(0); setTimeout(loadEvents, 100); }}>Clear</button>
-            </form>
+
+                {/* Clean Clear button that only shows up when there is text */}
+                {searchTerm && (
+                    <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => {
+                            setSearchTerm('');
+                            setCurrentPage(0);
+                        }}
+                    >
+                        Clear
+                    </button>
+                )}
+            </div>
 
             {errorMessage && <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>⚠️ {errorMessage}</div>}
 

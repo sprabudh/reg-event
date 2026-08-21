@@ -17,4 +17,10 @@ public interface AttendeeRepository extends JpaRepository<Attendee, Long> {
 
     // Counts how many people are currently registered
     long countByEventId(Long eventId);
+
+    long countByEventIdAndStatus(Long eventId, com.example.eventreg.entity.RegistrationStatus status);
+
+    // Finds the first waitlisted person based on whoever registered earliest
+    java.util.Optional<Attendee> findFirstByEventIdAndStatusOrderByRegistrationDateAsc(Long eventId, com.example.eventreg.entity.RegistrationStatus status);
+
 }

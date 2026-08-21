@@ -34,26 +34,60 @@ const EditAttendee = () => {
     };
 
     return (
-        <div>
-            <button onClick={() => navigate(-1)} style={{ padding: '5px 10px', backgroundColor: '#ccc', border: 'none', cursor: 'pointer', marginBottom: '20px' }}>
+        <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+            {/* Standardized Go Back Link */}
+            <span
+                onClick={() => navigate(-1)}
+                style={{ cursor: 'pointer', color: '#64748B', fontWeight: '500', display: 'inline-block', marginBottom: '20px' }}
+            >
                 ← Go Back
-            </button>
-            <h2>Edit Attendee</h2>
-            {error && <div style={{ color: 'white', backgroundColor: '#ff4d4d', padding: '10px', marginBottom: '15px', borderRadius: '4px' }}>⚠️ {error}</div>}
+            </span>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', maxWidth: '300px', gap: '15px' }}>
-                <div>
-                    <label>Full Name:</label><br/>
-                    <input type="text" name="name" value={formData.name} onChange={handleChange} required style={{ width: '100%', padding: '8px' }} />
-                </div>
-                <div>
-                    <label>Email Address:</label><br/>
-                    <input type="email" name="email" value={formData.email} onChange={handleChange} required style={{ width: '100%', padding: '8px' }} />
-                </div>
-                <button type="submit" style={{ padding: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-                    Save Changes
-                </button>
-            </form>
+            {/* Standardized Card Container */}
+            <div className="card">
+                <h2 style={{ marginTop: 0, marginBottom: '20px' }}>Edit Attendee</h2>
+
+                {/* Standardized Error Banner */}
+                {error && (
+                    <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div>
+                        <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B', display: 'block', marginBottom: '5px' }}>
+                            Full Name
+                        </label>
+                        <input
+                            type="text"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                            style={{ width: '100%', boxSizing: 'border-box' }}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B', display: 'block', marginBottom: '5px' }}>
+                            Email Address
+                        </label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                            style={{ width: '100%', boxSizing: 'border-box' }}
+                        />
+                    </div>
+
+                    {/* Standardized Button */}
+                    <button type="submit" className="btn" style={{ marginTop: '10px' }}>
+                        Save Changes
+                    </button>
+                </form>
+            </div>
         </div>
     );
 };

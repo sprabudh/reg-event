@@ -2,9 +2,9 @@ package com.example.eventreg.service;
 
 import com.example.eventreg.entity.Attendee;
 import com.example.eventreg.entity.Event;
+import com.example.eventreg.entity.RegistrationStatus;
 import com.example.eventreg.exception.AttendeeNotFoundException;
 import com.example.eventreg.exception.DuplicateRegistrationException;
-import com.example.eventreg.exception.EventFullException;
 import com.example.eventreg.repository.AttendeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -25,14 +25,21 @@ public class AttendeeService {
     public Attendee registerAttendee(Long eventId, Attendee attendee) {
         Event event = eventService.getEventById(eventId);
 
-        if (attendeeRepository.countByEventId(eventId) >= event.getCapacity()) {
-            throw new EventFullException("Registration failed: Event capacity is full");
-        }
-
+        // 1. Check if the user is already registered for this event first
         if (attendeeRepository.existsByEmailAndEventId(attendee.getEmail(), eventId)) {
             throw new DuplicateRegistrationException("Registration failed: Email is already registered for this event");
         }
 
+        // 2. Count ONLY the currently confirmed attendees
+        long confirmedCount = attendeeRepository.countByEventIdAndStatus(eventId, RegistrationStatus.CONFIRMED);
+
+        // 3. Determine the status dynamically based on capacity
+        RegistrationStatus currentStatus = (confirmedCount < event.getCapacity())
+                ? RegistrationStatus.CONFIRMED
+                : RegistrationStatus.WAITLISTED;
+
+        // 4. Assign the status, link the event, and save successfully
+        attendee.setStatus(currentStatus);
         attendee.setEvent(event);
         return attendeeRepository.save(attendee);
     }
@@ -42,18 +49,15 @@ public class AttendeeService {
         return attendeeRepository.findByEventId(eventId, pageable);
     }
 
-    // --- NEW: Get a single Attendee by ID ---
     public Attendee getAttendeeById(Long id) {
         return attendeeRepository.findById(id)
                 .orElseThrow(() -> new AttendeeNotFoundException("Attendee not found with id: " + id));
     }
 
-    // --- NEW: Update Attendee ---
     @Transactional
     public Attendee updateAttendee(Long id, Attendee attendeeDetails) {
         Attendee attendee = getAttendeeById(id);
 
-        // Check if they are trying to change to an email that someone else is already using in this event
         if (!attendee.getEmail().equals(attendeeDetails.getEmail())) {
             if (attendeeRepository.existsByEmailAndEventId(attendeeDetails.getEmail(), attendee.getEvent().getId())) {
                 throw new DuplicateRegistrationException("Update failed: Email is already registered for this event");
@@ -65,8 +69,25 @@ public class AttendeeService {
         return attendeeRepository.save(attendee);
     }
 
+    @Transactional
     public void deleteAttendee(Long id) {
-        Attendee attendee = getAttendeeById(id);
-        attendeeRepository.delete(attendee);
+        // 1. Get the attendee before deleting to know their status and event
+        Attendee attendeeToDelete = getAttendeeById(id);
+        Long eventId = attendeeToDelete.getEvent().getId();
+        RegistrationStatus oldStatus = attendeeToDelete.getStatus();
+
+        // 2. Delete the attendee
+        attendeeRepository.delete(attendeeToDelete);
+
+        // 3. Auto-Promotion Logic: If they gave up a CONFIRMED seat, fill it!
+        if (oldStatus == RegistrationStatus.CONFIRMED || oldStatus == null) {
+            attendeeRepository.findFirstByEventIdAndStatusOrderByRegistrationDateAsc(eventId, RegistrationStatus.WAITLISTED)
+                    .ifPresent(waitlistedAttendee -> {
+                        // Upgrade their status
+                        waitlistedAttendee.setStatus(RegistrationStatus.CONFIRMED);
+                        // Save the promoted attendee
+                        attendeeRepository.save(waitlistedAttendee);
+                    });
+        }
     }
 }

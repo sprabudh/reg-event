@@ -38,9 +38,11 @@ public class AuthService {
                 .build();
         repository.save(user);
         var jwtToken = jwtService.generateToken(user);
+
         return AuthModels.AuthenticationResponse.builder()
                 .token(jwtToken)
                 .role(user.getRole().name()) // Send the role to React!
+                .name(user.getName())        // <--- ADDED THIS: Send the name to React!
                 .build();
     }
 
@@ -50,9 +52,11 @@ public class AuthService {
         );
         var user = repository.findByEmail(request.getEmail()).orElseThrow();
         var jwtToken = jwtService.generateToken(user);
+
         return AuthModels.AuthenticationResponse.builder()
                 .token(jwtToken)
                 .role(user.getRole().name()) // Send the role to React!
+                .name(user.getName())        // <--- ADDED THIS: Send the name to React!
                 .build();
     }
 }
