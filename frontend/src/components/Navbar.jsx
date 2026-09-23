@@ -29,7 +29,7 @@ const Navbar = () => {
 
                         {/* Only show the Categories link if the user is an ADMIN */}
                         {userRole === 'ADMIN' && (
-                            <Link to="/categories" style={{ color: '#61dafb', textDecoration: 'none', fontSize: '18px' }}>Manage Categories</Link>
+                            <Link to="/categories" style={{ color: '#61dafb', textDecoration: 'none', fontSize: '18px' }}> Categories</Link>
                         )}
                     </>
                 )}

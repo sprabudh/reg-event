@@ -2,9 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import EventsList from './pages/EventsList';
-import CreateEvent from './pages/CreateEvent';
 import EventDetails from './pages/EventDetails';
-import EditEvent from './pages/EditEvent';
+import EventForm from './pages/EventForm'; // NEW: Replaces CreateEvent and EditEvent
 import EditAttendee from './pages/EditAttendee';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -33,9 +32,12 @@ function App() {
                     {/* Protected Routes */}
                     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/events" element={<ProtectedRoute><EventsList /></ProtectedRoute>} />
-                    <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
                     <Route path="/events/:id" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
-                    <Route path="/edit-event/:id" element={<ProtectedRoute><EditEvent /></ProtectedRoute>} />
+
+                    {/* UPDATED: Both routes now use the shared EventForm component */}
+                    <Route path="/create-event" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
+                    <Route path="/edit-event/:id" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
+
                     <Route path="/edit-attendee/:id" element={<ProtectedRoute><EditAttendee /></ProtectedRoute>} />
                     <Route path="/admin-setup" element={<AdminRegister />} />
 
