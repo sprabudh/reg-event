@@ -23,4 +23,5 @@ public interface AttendeeRepository extends JpaRepository<Attendee, Long> {
     // Finds the first waitlisted person based on whoever registered earliest
     java.util.Optional<Attendee> findFirstByEventIdAndStatusOrderByRegistrationDateAsc(Long eventId, com.example.eventreg.entity.RegistrationStatus status);
 
+    Page<Attendee> findByEventIdAndEmail(Long eventId, String email, Pageable pageable);
 }

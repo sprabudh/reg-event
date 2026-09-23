@@ -35,4 +35,27 @@ public class Event {
     @Positive(message = "Capacity must be greater than 0")
     @Column(nullable = false)
     private Integer capacity;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    @NotNull(message = "Category is required")
+    private Category category;
+
+    @Column(name = "location")
+    private String location;
+
+    @Column(name = "event_time")
+    private String time;
+
+    @Column(name = "duration")
+    private String duration;
+
+    @Column(name = "price")
+    private Double price;
+
+    @Column(name = "is_online")
+    private Boolean isOnline = false;
+
+    @Column(name = "is_refundable")
+    private Boolean isRefundable = false;
 }

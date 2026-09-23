@@ -25,20 +25,16 @@ public class AttendeeService {
     public Attendee registerAttendee(Long eventId, Attendee attendee) {
         Event event = eventService.getEventById(eventId);
 
-        // 1. Check if the user is already registered for this event first
         if (attendeeRepository.existsByEmailAndEventId(attendee.getEmail(), eventId)) {
             throw new DuplicateRegistrationException("Registration failed: Email is already registered for this event");
         }
 
-        // 2. Count ONLY the currently confirmed attendees
         long confirmedCount = attendeeRepository.countByEventIdAndStatus(eventId, RegistrationStatus.CONFIRMED);
 
-        // 3. Determine the status dynamically based on capacity
         RegistrationStatus currentStatus = (confirmedCount < event.getCapacity())
                 ? RegistrationStatus.CONFIRMED
                 : RegistrationStatus.WAITLISTED;
 
-        // 4. Assign the status, link the event, and save successfully
         attendee.setStatus(currentStatus);
         attendee.setEvent(event);
         return attendeeRepository.save(attendee);
@@ -47,6 +43,12 @@ public class AttendeeService {
     public Page<Attendee> getAttendeesByEvent(Long eventId, Pageable pageable) {
         eventService.getEventById(eventId);
         return attendeeRepository.findByEventId(eventId, pageable);
+    }
+
+    // NEW METHOD added to securely fetch only a specific user's registration data
+    public Page<Attendee> getAttendeesByEventAndEmail(Long eventId, String email, Pageable pageable) {
+        eventService.getEventById(eventId);
+        return attendeeRepository.findByEventIdAndEmail(eventId, email, pageable);
     }
 
     public Attendee getAttendeeById(Long id) {
@@ -71,21 +73,16 @@ public class AttendeeService {
 
     @Transactional
     public void deleteAttendee(Long id) {
-        // 1. Get the attendee before deleting to know their status and event
         Attendee attendeeToDelete = getAttendeeById(id);
         Long eventId = attendeeToDelete.getEvent().getId();
         RegistrationStatus oldStatus = attendeeToDelete.getStatus();
 
-        // 2. Delete the attendee
         attendeeRepository.delete(attendeeToDelete);
 
-        // 3. Auto-Promotion Logic: If they gave up a CONFIRMED seat, fill it!
         if (oldStatus == RegistrationStatus.CONFIRMED || oldStatus == null) {
             attendeeRepository.findFirstByEventIdAndStatusOrderByRegistrationDateAsc(eventId, RegistrationStatus.WAITLISTED)
                     .ifPresent(waitlistedAttendee -> {
-                        // Upgrade their status
                         waitlistedAttendee.setStatus(RegistrationStatus.CONFIRMED);
-                        // Save the promoted attendee
                         attendeeRepository.save(waitlistedAttendee);
                     });
         }

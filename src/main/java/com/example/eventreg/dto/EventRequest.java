@@ -1,5 +1,6 @@
 package com.example.eventreg.dto;
 
+import com.example.eventreg.entity.Category;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -23,4 +24,6 @@ public class EventRequest {
 
     @Min(value = 1, message = "Capacity must be at least 1")
     private int capacity;
+
+    private Category category;
 }

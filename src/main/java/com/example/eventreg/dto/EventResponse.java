@@ -1,5 +1,6 @@
 package com.example.eventreg.dto;
 
+import com.example.eventreg.entity.Category;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,4 +14,6 @@ public class EventResponse {
     private String name;
     private LocalDate date;
     private int capacity;
+
+    private Category category;
 }

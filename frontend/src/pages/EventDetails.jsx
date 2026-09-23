@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getEventById } from '../services/eventService';
+import { getEventById, getEventStats } from '../services/eventService';
 import { getAttendeesByEvent, registerAttendee, deleteAttendee } from '../services/attendeeService';
 import { getUserRole, getUserEmail } from '../services/authService';
 
@@ -9,6 +9,7 @@ const EventDetails = () => {
 
     const [event, setEvent] = useState(null);
     const [attendees, setAttendees] = useState([]);
+    const [stats, setStats] = useState({ capacity: 0, registered: 0, available: 0 }); // Secure backend stats
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [formData, setFormData] = useState({ name: '', email: '' });
@@ -20,13 +21,19 @@ const EventDetails = () => {
     useEffect(() => {
         loadEventDetails();
         loadAttendees();
+        loadEventStats();
     }, [id]);
 
     const loadEventDetails = () => {
         getEventById(id).then(res => setEvent(res.data)).catch(err => console.error(err));
     };
 
+    const loadEventStats = () => {
+        getEventStats(id).then(res => setStats(res.data)).catch(err => console.error(err));
+    };
+
     const loadAttendees = () => {
+        // For standard users, the backend must be configured to only return their specific record
         getAttendeesByEvent(id, 0, 100).then(res => setAttendees(res.data.content)).catch(err => console.error(err));
     };
 
@@ -39,7 +46,6 @@ const EventDetails = () => {
 
         registerAttendee(id, formData)
             .then((res) => {
-                // Dynamically check the status returned from Spring Boot
                 if (res.data && res.data.status === 'WAITLISTED') {
                     setSuccess('Event is full. You have been added to the waitlist!');
                 } else {
@@ -48,6 +54,7 @@ const EventDetails = () => {
                 setFormData({ name: '', email: '' });
                 loadEventDetails();
                 loadAttendees();
+                loadEventStats(); // Refresh secure stats
             })
             .catch((err) => {
                 setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -57,131 +64,175 @@ const EventDetails = () => {
     const handleDeleteAttendee = (attendeeId) => {
         const message = userRole === 'ADMIN' ? "Remove this attendee?" : "Cancel your registration?";
         if (window.confirm(message)) {
-            deleteAttendee(attendeeId).then(() => { loadEventDetails(); loadAttendees(); }).catch(console.error);
+            deleteAttendee(attendeeId).then(() => {
+                loadEventDetails();
+                loadAttendees();
+                loadEventStats();
+                setSuccess('Registration cancelled successfully.');
+            }).catch(console.error);
         }
     };
 
     if (!event) return <div style={{ padding: '20px' }}>Loading...</div>;
-
-    // Calculate available seats strictly based on CONFIRMED attendees
-    const confirmedAttendees = attendees.filter(a => a.status === 'CONFIRMED' || !a.status);
-    const availableSeats = Math.max(0, event.capacity - confirmedAttendees.length);
 
     const filteredAttendees = attendees.filter(a =>
         a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // NEW: Sort the attendees so CONFIRMED are at the top, WAITLISTED at the bottom
     const sortedAttendees = [...filteredAttendees].sort((a, b) => {
-        // Treat null/undefined status as CONFIRMED for backwards compatibility
         const statusA = a.status || 'CONFIRMED';
         const statusB = b.status || 'CONFIRMED';
-
         if (statusA === 'CONFIRMED' && statusB === 'WAITLISTED') return -1;
         if (statusA === 'WAITLISTED' && statusB === 'CONFIRMED') return 1;
         return 0;
     });
 
-    const showActionsColumn = userRole === 'ADMIN' || filteredAttendees.some(a => a.email === userEmail);
-
     return (
         <div>
             <Link to="/events" style={{ textDecoration: 'none', color: '#64748B', fontWeight: '500', marginBottom: '20px', display: 'inline-block' }}>← Back to Events</Link>
 
-            <div className="card" style={{ marginBottom: '30px' }}>
-                <h2 style={{ margin: '0 0 15px 0' }}>{event.name}</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '14px' }}>
+            {/* Stage 2: Enhanced Event Header Information */}
+            <div className="card" style={{ marginBottom: '20px', padding: '24px', backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <h2 style={{ marginTop: 0, fontSize: '28px', color: '#111827' }}>{event.name}</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', fontSize: '15px', color: '#4b5563', marginTop: '20px' }}>
                     <p style={{ margin: '5px 0' }}><strong>Date:</strong> {event.date}</p>
-                    <p style={{ margin: '5px 0' }}><strong>Total Capacity:</strong> {event.capacity}</p>
-                    <p style={{ margin: '5px 0' }}><strong>Total Registrations:</strong> {attendees.length}</p>
-                    <p style={{ margin: '5px 0' }}><strong>Available Seats:</strong> <span style={{ color: availableSeats === 0 ? '#EF4444' : '#10B981', fontWeight: 'bold' }}>{availableSeats}</span></p>
+                    <p style={{ margin: '5px 0' }}><strong>Time:</strong> {event.time || 'TBA'}</p>
+                    <p style={{ margin: '5px 0' }}><strong>Duration:</strong> {event.duration || 'TBA'}</p>
+
+                    <p style={{ margin: '5px 0' }}>
+                        <strong>Price:</strong> {!event.price || event.price === 0 ? <span style={{ color: '#10b981', fontWeight: 'bold' }}>Free</span> : `$${event.price}`}
+                    </p>
+
+                    {event.isOnline ? (
+                        <p style={{ margin: '5px 0' }}><strong>Location:</strong> <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>Online Event</span></p>
+                    ) : (
+                        <p style={{ margin: '5px 0' }}><strong>Location:</strong> {event.location || 'TBA'}</p>
+                    )}
+
+                    <p style={{ margin: '5px 0' }}><strong>Cancellation:</strong> {event.isRefundable ? 'Refund Available' : 'No Refund'}</p>
+                </div>
+            </div>
+
+            {/* Stage 3: Secure Dynamic Status Dashboard */}
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, padding: '20px', backgroundColor: '#e0e7ff', borderRadius: '8px', border: '1px solid #c7d2fe', minWidth: '200px' }}>
+                    <h4 style={{ margin: '0 0 10px 0', color: '#3730a3', fontSize: '14px', textTransform: 'uppercase' }}>Total Registrations</h4>
+                    <p style={{ fontSize: '28px', margin: 0, fontWeight: 'bold', color: '#312e81' }}>{stats.registered} / {stats.capacity}</p>
+                </div>
+                <div style={{ flex: 1, padding: '20px', backgroundColor: '#d1fae5', borderRadius: '8px', border: '1px solid #a7f3d0', minWidth: '200px' }}>
+                    <h4 style={{ margin: '0 0 10px 0', color: '#065f46', fontSize: '14px', textTransform: 'uppercase' }}>Available Seats</h4>
+                    <p style={{ fontSize: '28px', margin: 0, fontWeight: 'bold', color: '#064e3b' }}>{stats.available}</p>
                 </div>
             </div>
 
             <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
+                {/* Registration Form */}
                 <div className="card" style={{ flex: '1', minWidth: '300px', alignSelf: 'flex-start' }}>
                     <h3 style={{ marginTop: 0 }}>Register</h3>
 
                     {error && <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>{error}</div>}
                     {success && <div style={{ backgroundColor: '#D1FAE5', color: '#047857', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>{success}</div>}
 
-                    {/* The form remains open regardless of capacity now */}
                     <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                         <div>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>Full Name</label>
-                            <input type="text" name="name" value={formData.name} onChange={handleInputChange} required />
+                            <input type="text" name="name" value={formData.name} onChange={handleInputChange} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
                         </div>
                         <div>
                             <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>Email Address</label>
-                            <input type="email" name="email" value={formData.email} onChange={handleInputChange} required />
+                            <input type="email" name="email" value={formData.email} onChange={handleInputChange} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}/>
                         </div>
                         <button
                             type="submit"
                             className="btn"
                             style={{
                                 marginTop: '10px',
-                                backgroundColor: availableSeats === 0 ? '#d97706' : '#4f46e5' // Changes to orange if waitlist
+                                width: '100%',
+                                backgroundColor: stats.available === 0 ? '#d97706' : '#4f46e5'
                             }}
                         >
-                            {availableSeats > 0 ? 'Register Now' : 'Join Waitlist'}
+                            {stats.available > 0 ? 'Register Now' : 'Join Waitlist'}
                         </button>
                     </form>
                 </div>
 
                 <div style={{ flex: '2', minWidth: '400px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                        <h3 style={{ margin: 0 }}>Attendees</h3>
-                        <input type="text" placeholder="Search attendees..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: '200px' }} />
-                    </div>
+                    {/* Stage 3: Role-Based Attendee Visibility */}
+                    {userRole === 'ADMIN' ? (
+                        <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <h3 style={{ margin: 0 }}>All Attendees (Admin View)</h3>
+                                <input type="text" placeholder="Search attendees..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: '200px', padding: '6px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                            </div>
 
-                    {sortedAttendees.length === 0 ? (
-                        <p style={{ color: '#64748B' }}>No attendees found.</p>
+                            {sortedAttendees.length === 0 ? (
+                                <p style={{ color: '#64748B' }}>No attendees found.</p>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                    <tr style={{ backgroundColor: '#1e293b', color: 'white', textAlign: 'left' }}>
+                                        <th style={{ padding: '12px' }}>Name</th>
+                                        <th style={{ padding: '12px' }}>Email</th>
+                                        <th style={{ padding: '12px' }}>Status</th>
+                                        <th style={{ padding: '12px' }}>Actions</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {sortedAttendees.map(a => (
+                                        <tr key={a.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                            <td style={{ padding: '12px' }}>{a.name}</td>
+                                            <td style={{ padding: '12px' }}>{a.email}</td>
+                                            <td style={{ padding: '12px' }}>
+                                                <span style={{
+                                                    color: a.status === 'WAITLISTED' ? '#d97706' : '#16a34a',
+                                                    fontWeight: '600',
+                                                    backgroundColor: a.status === 'WAITLISTED' ? '#fef3c7' : '#dcfce3',
+                                                    padding: '4px 8px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '12px'
+                                                }}>
+                                                    {a.status || 'CONFIRMED'}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '12px', display: 'flex', gap: '8px' }}>
+                                                <Link to={`/edit-attendee/${a.id}`} className="btn btn-small btn-secondary" style={{ padding: '6px 10px' }}>Edit</Link>
+                                                <button onClick={() => handleDeleteAttendee(a.id)} className="btn btn-small btn-danger" style={{ padding: '6px 10px', border: 'none', cursor: 'pointer' }}>Delete</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </>
                     ) : (
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Status</th>
-                                {showActionsColumn && <th>Actions</th>}
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {/* NEW: Rendering the sorted array instead of the filtered one */}
-                            {sortedAttendees.map(a => (
-                                <tr key={a.id}>
-                                    <td>{a.name}</td>
-                                    <td>{a.email}</td>
-                                    <td>
+                        <div className="card" style={{ padding: '25px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <h3 style={{ margin: '0 0 15px 0', color: '#0f172a' }}>My Registration Status</h3>
+                            {attendees.length > 0 ? (
+                                <div>
+                                    <p style={{ fontSize: '16px', color: '#334155' }}>Your current status for this event is:
                                         <span style={{
-                                            color: a.status === 'WAITLISTED' ? '#d97706' : '#16a34a',
+                                            marginLeft: '10px',
+                                            color: attendees[0].status === 'WAITLISTED' ? '#d97706' : '#16a34a',
                                             fontWeight: '600',
-                                            backgroundColor: a.status === 'WAITLISTED' ? '#fef3c7' : '#dcfce3',
-                                            padding: '4px 8px',
-                                            borderRadius: '12px',
-                                            fontSize: '12px'
+                                            backgroundColor: attendees[0].status === 'WAITLISTED' ? '#fef3c7' : '#dcfce3',
+                                            padding: '6px 12px',
+                                            borderRadius: '12px'
                                         }}>
-                                            {a.status || 'CONFIRMED'}
+                                            {attendees[0].status || 'CONFIRMED'}
                                         </span>
-                                    </td>
-                                    {showActionsColumn && (
-                                        <td>
-                                            {userRole === 'ADMIN' && (
-                                                <>
-                                                    <Link to={`/edit-attendee/${a.id}`} className="btn btn-small btn-secondary">Edit</Link>
-                                                    <button onClick={() => handleDeleteAttendee(a.id)} className="btn btn-small btn-danger">Delete</button>
-                                                </>
-                                            )}
-                                            {userRole !== 'ADMIN' && a.email === userEmail && (
-                                                <button onClick={() => handleDeleteAttendee(a.id)} className="btn btn-small btn-danger">Cancel</button>
-                                            )}
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
+                                    </p>
+                                    <button
+                                        onClick={() => handleDeleteAttendee(attendees[0].id)}
+                                        style={{ marginTop: '20px', padding: '10px 15px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+                                    >
+                                        Cancel My Registration
+                                    </button>
+                                </div>
+                            ) : (
+                                <p style={{ color: '#64748B', fontSize: '15px' }}>You have not registered for this event yet. Use the form to secure your spot or join the waitlist.</p>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

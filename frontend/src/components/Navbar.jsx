@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
-import { isAuthenticated, logoutUser } from '../services/authService';
+import { isAuthenticated, logoutUser, getUserRole } from '../services/authService';
 
 const Navbar = () => {
     const loggedIn = isAuthenticated();
+    const userRole = getUserRole(); // Fetch the role to check if they are an ADMIN
 
     // Fetch the stored name from localStorage
     const userName = localStorage.getItem('userName');
@@ -20,12 +21,17 @@ const Navbar = () => {
                 {loggedIn && (
                     <>
                         <Link to="/" style={{ color: '#61dafb', textDecoration: 'none', marginRight: '20px', fontSize: '18px' }}>Dashboard</Link>
-                        <Link to="/events" style={{ color: '#61dafb', textDecoration: 'none', fontSize: '18px' }}>Manage Events</Link>
+                        <Link to="/events" style={{ color: '#61dafb', textDecoration: 'none', marginRight: '20px', fontSize: '18px' }}> Events</Link>
+
+                        {/* Only show the Categories link if the user is an ADMIN */}
+                        {userRole === 'ADMIN' && (
+                            <Link to="/categories" style={{ color: '#61dafb', textDecoration: 'none', fontSize: '18px' }}>Manage Categories</Link>
+                        )}
                     </>
                 )}
             </div>
 
-            {/* Updated Right Side: Greeting + Logout Button neatly aligned */}
+            {/* Right Side: Greeting + Logout Button neatly aligned */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                 {loggedIn ? (
                     <>

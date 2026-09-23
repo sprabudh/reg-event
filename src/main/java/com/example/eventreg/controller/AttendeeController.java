@@ -28,19 +28,34 @@ public class AttendeeController {
     public ResponseEntity<Page<Attendee>> getAttendeesByEvent(
             @PathVariable Long eventId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "100") int size) { // Set size to 100 to show all on frontend easily
-        Page<Attendee> attendees = attendeeService.getAttendeesByEvent(eventId, PageRequest.of(page, size));
-        return ResponseEntity.ok(attendees);
+            @RequestParam(defaultValue = "100") int size,
+            java.security.Principal principal) {
+
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        String userEmail = principal.getName();
+
+        // FIX: Check for both "ADMIN" and "ROLE_ADMIN" to ensure the Admin is correctly identified
+        boolean isAdmin = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN"));
+
+        if (isAdmin) {
+            // ADMIN gets all attendees for the event
+            return ResponseEntity.ok(attendeeService.getAttendeesByEvent(eventId, PageRequest.of(page, size)));
+        } else {
+            // USER gets ONLY their own registration data
+            Page<Attendee> userOnlyData = attendeeService.getAttendeesByEventAndEmail(eventId, userEmail, PageRequest.of(page, size));
+            return ResponseEntity.ok(userOnlyData);
+        }
     }
 
-    // --- NEW: Get single attendee API ---
     @GetMapping("/attendees/{id}")
     public ResponseEntity<Attendee> getAttendeeById(@PathVariable Long id) {
         Attendee attendee = attendeeService.getAttendeeById(id);
         return ResponseEntity.ok(attendee);
     }
 
-    // --- NEW: Update attendee API ---
     @PutMapping("/attendees/{id}")
     public ResponseEntity<Attendee> updateAttendee(@PathVariable Long id, @Valid @RequestBody Attendee attendeeDetails) {
         Attendee updatedAttendee = attendeeService.updateAttendee(id, attendeeDetails);

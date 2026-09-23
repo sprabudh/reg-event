@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import { isAuthenticated } from './services/authService';
 import AdminRegister from './pages/AdminRegister';
+import ManageCategories from "./pages/ManageCategories.jsx";
 
 // This acts as a guard. If there is no token, it kicks them to the login screen!
 const ProtectedRoute = ({ children }) => {
@@ -37,6 +38,8 @@ function App() {
                     <Route path="/edit-event/:id" element={<ProtectedRoute><EditEvent /></ProtectedRoute>} />
                     <Route path="/edit-attendee/:id" element={<ProtectedRoute><EditAttendee /></ProtectedRoute>} />
                     <Route path="/admin-setup" element={<AdminRegister />} />
+
+                    <Route path="/categories" element={<ManageCategories />} />
                 </Routes>
             </div>
         </BrowserRouter>

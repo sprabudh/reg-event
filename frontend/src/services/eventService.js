@@ -1,11 +1,9 @@
 import api from './api';
 
-export const getEvents = (page = 0, size = 10, name = '') => {
-    // If a name is searched, attach it to the URL
+export const getEvents = (page = 0, size = 10, name = '', categoryId = '') => {
     let url = `/events?page=${page}&size=${size}`;
-    if (name) {
-        url += `&name=${name}`;
-    }
+    if (name) url += `&name=${name}`;
+    if (categoryId) url += `&categoryId=${categoryId}`;
     return api.get(url);
 };
 
@@ -24,3 +22,5 @@ export const updateEvent = (id, eventData) => {
 export const deleteEvent = (id) => {
     return api.delete(`/events/${id}`);
 };
+
+export const getEventStats = (id) => api.get(`/events/${id}/stats`);

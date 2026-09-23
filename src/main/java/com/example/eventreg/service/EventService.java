@@ -17,18 +17,14 @@ public class EventService {
     private EventRepository eventRepository;
 
     @Autowired
-    private AttendeeRepository attendeeRepository; // Added this!
+    private AttendeeRepository attendeeRepository;
 
     public Event createEvent(Event event) {
         return eventRepository.save(event);
     }
 
-    // Updated to support mandatory Filtering!
-    public Page<Event> getAllEvents(String name, Pageable pageable) {
-        if (name != null && !name.isEmpty()) {
-            return eventRepository.findByNameContainingIgnoreCase(name, pageable);
-        }
-        return eventRepository.findAll(pageable);
+    public Page<Event> getAllEvents(String name, Long categoryId, Pageable pageable) {
+        return eventRepository.searchEvents(name, categoryId, pageable);
     }
 
     public Event getEventById(Long id) {
@@ -37,17 +33,24 @@ public class EventService {
     }
 
     public Event updateEvent(Long id, Event eventDetails) {
-        Event event = getEventById(id);
-        event.setName(eventDetails.getName());
-        event.setDate(eventDetails.getDate());
-        event.setCapacity(eventDetails.getCapacity());
-        return eventRepository.save(event);
-    }
+            Event event = getEventById(id);
+            event.setName(eventDetails.getName());
+            event.setDate(eventDetails.getDate());
+            event.setCapacity(eventDetails.getCapacity());
+            event.setCategory(eventDetails.getCategory());
+            event.setLocation(eventDetails.getLocation());
+            event.setTime(eventDetails.getTime());
+            event.setDuration(eventDetails.getDuration());
+            event.setPrice(eventDetails.getPrice());
+            event.setIsOnline(eventDetails.getIsOnline());
+            event.setIsRefundable(eventDetails.getIsRefundable());
+
+            return eventRepository.save(event);
+        }
 
     public void deleteEvent(Long id) {
         Event event = getEventById(id);
 
-        // Fulfilling Edge Case 7: Reject deletion if attendees exist
         if (attendeeRepository.countByEventId(id) > 0) {
             throw new EventDeletionException("Cannot delete event because attendees are currently registered.");
         }
