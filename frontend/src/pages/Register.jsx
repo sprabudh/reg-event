@@ -11,6 +11,14 @@ const Register = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        setError(''); // Clear any previous errors
+
+        // NEW: Strict Password Validation
+        if (formData.password.length < 8) {
+            setError("Security Requirement: Password must be at least 8 characters long.");
+            return;
+        }
+
         registerUser(formData)
             .then((response) => {
                 localStorage.setItem('token', response.data.token);
@@ -48,7 +56,7 @@ const Register = () => {
                     <input
                         type="password"
                         name="password"
-                        placeholder="Password"
+                        placeholder="Password (min. 8 characters)"
                         onChange={handleChange}
                         required
                         style={styles.input}

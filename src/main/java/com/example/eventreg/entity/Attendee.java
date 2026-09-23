@@ -33,6 +33,9 @@ public class Attendee {
     @Column(nullable = false)
     private String email;
 
+    @Column(name = "mobile_number")
+    private String mobileNumber;
+
     @CreationTimestamp
     @Column(name = "registration_date", updatable = false)
     private LocalDateTime registrationDate;
@@ -42,7 +45,21 @@ public class Attendee {
     @JsonIgnore // Prevents infinite loops when retrieving data
     private Event event;
 
-    // This is now properly INSIDE the class!
     @Enumerated(EnumType.STRING)
     private RegistrationStatus status;
+
+    @Column(name = "ticket_uuid", unique = true)
+    private String ticketUuid;
+
+    @Column(name = "qr_code", columnDefinition = "TEXT")
+    private String qrCodeBase64;
+
+
+    public String getMobileNumber() {
+        return mobileNumber;
+    }
+
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
+    }
 }

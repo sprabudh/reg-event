@@ -24,4 +24,6 @@ public interface AttendeeRepository extends JpaRepository<Attendee, Long> {
     java.util.Optional<Attendee> findFirstByEventIdAndStatusOrderByRegistrationDateAsc(Long eventId, com.example.eventreg.entity.RegistrationStatus status);
 
     Page<Attendee> findByEventIdAndEmail(Long eventId, String email, Pageable pageable);
+
+    java.util.Optional<Attendee> findByEventIdAndTicketUuid(Long eventId, String ticketUuid);
 }

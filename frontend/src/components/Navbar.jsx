@@ -9,9 +9,13 @@ const Navbar = () => {
     const userName = localStorage.getItem('userName');
 
     const handleLogout = () => {
-        logoutUser();
-        localStorage.removeItem('userName'); // Clear the name on logout
-        window.location.href = '/login';
+        if (window.confirm("Are you sure you want to log out of Eventora?")) {
+            // Your existing logout logic goes here (e.g., clearing local storage, context)
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            localStorage.removeItem('email');
+            window.location.href = '/login'; // Or navigate('/login')
+        }
     };
 
     return (

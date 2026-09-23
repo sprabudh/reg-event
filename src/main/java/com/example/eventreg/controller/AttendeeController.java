@@ -67,4 +67,17 @@ public class AttendeeController {
         attendeeService.deleteAttendee(id);
         return ResponseEntity.noContent().build();
     }
+
+    // --- Fast-Path Scanner Endpoint ---
+    // Make sure this says @PostMapping
+    @PostMapping("/events/{eventId}/checkin/{ticketUuid}")
+    public ResponseEntity<?> checkInAttendee(@PathVariable Long eventId, @PathVariable String ticketUuid) {
+        try {
+            Attendee checkedInUser = attendeeService.checkInAttendee(eventId, ticketUuid);
+            return ResponseEntity.ok(checkedInUser);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Collections.singletonMap("message", e.getMessage()));
+        }
+    }
 }

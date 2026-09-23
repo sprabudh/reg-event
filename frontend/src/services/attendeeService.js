@@ -19,3 +19,8 @@ export const updateAttendee = (id, attendeeData) => {
 export const deleteAttendee = (id) => {
     return api.delete(`/attendees/${id}`);
 };
+
+export const checkInAttendee = (eventId, ticketUuid) => {
+    return api.post(`/events/${eventId}/checkin/${ticketUuid}`);
+};
+

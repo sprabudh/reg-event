@@ -131,7 +131,7 @@ const EventsList = () => {
 
                             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                                 <Link to={`/events/${event.id}`} style={{ padding: '10px 16px', backgroundColor: '#4f46e5', color: 'white', textDecoration: 'none', borderRadius: '6px', fontWeight: '500', fontSize: '14px', flex: 1, textAlign: 'center', transition: 'background-color 0.2s' }}>
-                                    Book Tickets
+                                    {userRole === 'ADMIN' ? 'Manage Event  ' : 'Book Tickets'}
                                 </Link>
 
                                 {userRole === 'ADMIN' && (
