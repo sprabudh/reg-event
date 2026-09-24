@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { getMyTickets, deleteAttendee } from '../services/attendeeService';
 
 const STATUS_COLORS = {
-    CONFIRMED: { color: '#16a34a', bg: '#dcfce3' },
-    CHECKED_IN: { color: '#4f46e5', bg: '#e0e7ff' },
+    CONFIRMED: 'bd-green',
+    CHECKED_IN: 'bd-indigo',
 };
 
 const MyTickets = () => {
@@ -38,7 +38,7 @@ const MyTickets = () => {
     };
 
     const handlePrint = (ticket) => {
-        const statusStyle = STATUS_COLORS[ticket.status] || { color: '#111827', bg: '#e5e7eb' };
+        const statusClass = STATUS_COLORS[ticket.status] || 'bd-default';
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
@@ -60,7 +60,7 @@ const MyTickets = () => {
                     .ticket-info p { margin: 8px 0; font-size: 14px; color: #334155; }
                     .ticket-info strong { color: #0f172a; }
                     .ticket-id { font-family: monospace; background: #f1f5f9; padding: 6px 10px; border-radius: 6px; font-size: 13px; word-break: break-all; }
-                    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; color: ${statusStyle.color}; background: ${statusStyle.bg}; }
+                    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; color: ${statusClass === 'bd-green' ? '#16a34a' : statusClass === 'bd-indigo' ? '#4f46e5' : '#111827'}; background: ${statusClass === 'bd-green' ? '#dcfce3' : statusClass === 'bd-indigo' ? '#e0e7ff' : '#e5e7eb'}; }
                     .ticket-footer { border-top: 1px dashed #cbd5e1; padding: 14px 24px; font-size: 12px; color: #64748b; }
                 </style>
             </head>
@@ -100,112 +100,105 @@ const MyTickets = () => {
         printWindow.document.close();
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>Loading your tickets...</div>;
+    if (loading) return <div className="page-loading">Loading your tickets...</div>;
 
     return (
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
-            <h1 style={{ color: '#111827', margin: '0 0 4px 0' }}>My Tickets</h1>
-            <p style={{ color: '#6b7280', margin: '0 0 24px 0' }}>All your confirmed registrations, ready for check-in.</p>
+        <div className="mt-wrap">
+            <h1 className="mt-title">My Tickets</h1>
+            <p className="mt-subtitle">All your confirmed registrations, ready for check-in.</p>
 
-            {error && <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>{error}</div>}
-            {success && <div style={{ backgroundColor: '#D1FAE5', color: '#047857', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>{success}</div>}
+            {error && <div className="alert-error">{error}</div>}
+            {success && <div className="alert-success">{success}</div>}
 
             {sortedTickets.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
-                    <p style={{ color: '#6b7280', fontSize: '16px', margin: '0 0 16px 0' }}>
+                <div className="mt-empty">
+                    <p className="mt-empty-text">
                         You haven't registered for any events yet.
                     </p>
-                    <Link to="/events" style={{ color: '#4f46e5', textDecoration: 'none', fontWeight: '600', fontSize: '15px' }}>
+                    <Link to="/events" className="mt-empty-link">
                         Browse Events to secure your spot
                     </Link>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
+                <div className="mt-grid">
                     {sortedTickets.map((ticket) => {
-                        const badge = STATUS_COLORS[ticket.status] || { color: '#111827', bg: '#e5e7eb' };
+                        const badgeClass = STATUS_COLORS[ticket.status] || 'bd-default';
 
                         return (
-                            <div key={ticket.id} className="card" style={{ backgroundColor: '#ffffff', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                                <div style={{ backgroundColor: '#4f46e5', color: 'white', padding: '18px 20px' }}>
-                                    <p style={{ margin: '0 0 4px 0', fontSize: '11px', letterSpacing: '0.08em', opacity: '0.85' }}>EVENTORA · ENTRY TICKET</p>
-                                    <h3 style={{ margin: 0, fontSize: '20px', color: '#ffffff' }}>{ticket.eventName || 'Event'}</h3>
-                                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', opacity: '0.9' }}>
+                            <div key={ticket.id} className="card mt-card">
+                                <div className="mt-ticket-header">
+                                    <p className="mt-header-brand">EVENTORA · ENTRY TICKET</p>
+                                    <h3 className="mt-header-title">{ticket.eventName || 'Event'}</h3>
+                                    <p className="mt-header-sub">
                                         {ticket.eventDate || ''} {ticket.eventTime ? `· ${ticket.eventTime}` : ''}
                                     </p>
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '20px', padding: '20px', alignItems: 'flex-start' }}>
-                                    <div style={{ flexShrink: 0, textAlign: 'center' }}>
+                                <div className="mt-body">
+                                    <div className="mt-qr-wrap">
                                         {ticket.qrCodeBase64 ? (
-                                            <img src={ticket.qrCodeBase64} alt="QR Code Ticket" style={{ width: '140px', height: '140px', border: '1px solid #e2e8f0', borderRadius: '8px' }} />
+                                            <img src={ticket.qrCodeBase64} alt="QR Code Ticket" className="mt-qr-img" />
                                         ) : (
-                                            <div style={{ width: '140px', height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '12px', border: '1px dashed #cbd5e1', borderRadius: '8px' }}>
+                                            <div className="mt-qr-none">
                                                 Ticket<br />Unavailable
                                             </div>
                                         )}
                                     </div>
 
-                                    <div style={{ flex: 1, fontSize: '14px', color: '#334155' }}>
-                                        <p style={{ margin: '6px 0' }}><strong>Attendee:</strong> {ticket.name}</p>
-                                        <p style={{ margin: '6px 0' }}><strong>Email:</strong> {ticket.email}</p>
-                                        <p style={{ margin: '6px 0' }}>
+                                    <div className="mt-info">
+                                        <p className="mt-row"><strong>Attendee:</strong> {ticket.name}</p>
+                                        <p className="mt-row"><strong>Email:</strong> {ticket.email}</p>
+                                        <p className="mt-row">
                                             <strong>Location:</strong> {ticket.eventIsOnline ? 'Online Event' : (ticket.eventLocation || 'TBA')}
                                         </p>
-                                        <p style={{ margin: '6px 0' }}>
+                                        <p className="mt-row">
                                             <strong>Status:</strong>{' '}
-                                            <span style={{ color: badge.color, fontWeight: '600', backgroundColor: badge.bg, padding: '3px 10px', borderRadius: '12px', fontSize: '12px', marginLeft: '6px' }}>
+                                            <span className={`badge-pill mt-status ${badgeClass}`}>
                                                 {ticket.status || 'CONFIRMED'}
                                             </span>
                                         </p>
                                         {ticket.amount && ticket.amount > 0 ? (
                                             <>
-                                                <p style={{ margin: '6px 0' }}>
+                                                <p className="mt-row">
                                                     <strong>Paid:</strong> ₹{ticket.amount}{' '}
-                                                    <span style={{ color: '#16a34a', backgroundColor: '#dcfce3', fontWeight: '600', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', marginLeft: '4px' }}>
+                                                    <span className="mt-paid">
                                                         PAID
                                                     </span>
                                                 </p>
                                                 {ticket.invoiceNo && (
-                                                    <p style={{ margin: '6px 0' }}><strong>Invoice:</strong> <span style={{ fontFamily: 'monospace' }}>{ticket.invoiceNo}</span></p>
+                                                    <p className="mt-row"><strong>Invoice:</strong> <span className="font-mono">{ticket.invoiceNo}</span></p>
                                                 )}
                                                 {ticket.refundStatus && ticket.refundStatus !== 'NONE' && (
-                                                    <p style={{ margin: '6px 0' }}>
+                                                    <p className="mt-row">
                                                         <strong>Refund:</strong>{' '}
-                                                        <span style={{
-                                                            color: ticket.refundStatus === 'REFUNDED' ? '#16a34a' : '#d97706',
-                                                            fontWeight: '600',
-                                                            backgroundColor: ticket.refundStatus === 'REFUNDED' ? '#dcfce3' : '#fef3c7',
-                                                            padding: '3px 10px',
-                                                            borderRadius: '12px',
-                                                            fontSize: '12px'
-                                                        }}>
+                                                        <span className={`badge-pill ${ticket.refundStatus === 'REFUNDED' ? 'bd-green' : 'bd-orange'}`}>
                                                             {ticket.refundStatus === 'REFUNDED' ? 'Refunded' : 'Forfeited'}
                                                         </span>
                                                     </p>
                                                 )}
                                             </>
                                         ) : (
-                                            <p style={{ margin: '6px 0' }}>
+                                            <p className="mt-row">
                                                 <strong>Paid:</strong>{' '}
-                                                <span style={{ color: '#10b981', fontWeight: '700' }}>Free</span>
+                                                <span className="txt-green">Free</span>
                                             </p>
                                         )}
-                                        <p style={{ margin: '6px 0' }}><strong>Ticket ID:</strong></p>
-                                        <p style={{ margin: '6px 0', fontFamily: 'monospace', backgroundColor: '#f1f5f9', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', wordBreak: 'break-all' }}>
+                                        <p className="mt-row"><strong>Ticket ID:</strong></p>
+                                        <p className="mt-ticket-id">
                                             {ticket.ticketUuid || 'N/A'}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div style={{ borderTop: '1px dashed #cbd5e1', padding: '14px 20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                    <button onClick={() => handlePrint(ticket)} style={{ padding: '8px 14px', backgroundColor: '#4f46e5', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                                <div className="mt-footer">
+                                    <button onClick={() => handlePrint(ticket)} className="mt-btn-print">
                                         Print / Save PDF
                                     </button>
-                                    <Link to={`/events/${ticket.eventId}`} className="btn btn-small btn-secondary" style={{ padding: '8px 14px', textDecoration: 'none', fontSize: '13px' }}>
+                                    <Link to={`/events/${ticket.eventId}`} className="btn btn-small btn-secondary mt-btn-view">
                                         View Event
                                     </Link>
                                     {ticket.status !== 'CHECKED_IN' && (
-                                        <button onClick={() => handleCancel(ticket)} style={{ padding: '8px 14px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                                        <button onClick={() => handleCancel(ticket)} className="mt-btn-cancel">
                                             Cancel Registration
                                         </button>
                                     )}

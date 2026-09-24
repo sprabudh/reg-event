@@ -115,7 +115,7 @@ const EventDetails = () => {
             .catch(err => setError(err.response?.data?.message || 'Check-in failed. Please try again.'));
     };
 
-    if (!event) return <div style={{ padding: '20px' }}>Loading...</div>;
+    if (!event) return <div className="ed-loading">Loading...</div>;
 
     const expired = event.expired;
 
@@ -130,8 +130,8 @@ const EventDetails = () => {
     };
 
     const refundBadge = (refundStatus) => {
-        if (refundStatus === 'REFUNDED') return { label: 'Refunded', color: '#16a34a', bg: '#dcfce3' };
-        if (refundStatus === 'FORFEITED') return { label: 'Forfeited', color: '#d97706', bg: '#fef3c7' };
+        if (refundStatus === 'REFUNDED') return { label: 'Refunded', cls: 'ed-refunded' };
+        if (refundStatus === 'FORFEITED') return { label: 'Forfeited', cls: 'ed-forfeited' };
         return null;
     };
 
@@ -152,157 +152,156 @@ const EventDetails = () => {
 
     return (
         <div>
-            <Link to="/events" style={{ textDecoration: 'none', color: '#64748B', fontWeight: '500', marginBottom: '20px', display: 'inline-block' }}>← Back to Events</Link>
+            <Link to="/events" className="ed-back-link">← Back to Events</Link>
 
-            <div className="card" style={{ marginBottom: '20px', padding: '24px', backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                <h2 style={{ marginTop: 0, fontSize: '28px', color: '#111827' }}>
+            <div className="card ed-event-card">
+                <h2 className="ed-event-title">
                 {event.name}
                 {expired && (
-                    <span style={{ marginLeft: '12px', fontSize: '13px', fontWeight: '600', color: '#b91c1c', backgroundColor: '#fee2e2', padding: '4px 12px', borderRadius: '12px', verticalAlign: 'middle' }}>Event Ended</span>
+                    <span className="ed-ended-badge">Event Ended</span>
                 )}
             </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', fontSize: '15px', color: '#4b5563', marginTop: '20px' }}>
-                    <p style={{ margin: '5px 0' }}><strong>Date:</strong> {event.date}</p>
-                    <p style={{ margin: '5px 0' }}><strong>Time:</strong> {event.time || 'TBA'}</p>
-                    <p style={{ margin: '5px 0' }}><strong>Duration:</strong> {event.duration || 'TBA'}</p>
-                    <p style={{ margin: '5px 0' }}><strong>Price:</strong> {!event.price || event.price === 0 ? <span style={{ color: '#10b981', fontWeight: 'bold' }}>Free</span> : `₹${event.price}`}</p>                    {event.isOnline ? (
-                        <p style={{ margin: '5px 0' }}><strong>Location:</strong> <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>Online Event</span></p>
+                <div className="ed-info-grid">
+                    <p className="ed-info-item"><strong>Date:</strong> {event.date}</p>
+                    <p className="ed-info-item"><strong>Time:</strong> {event.time || 'TBA'}</p>
+                    <p className="ed-info-item"><strong>Duration:</strong> {event.duration || 'TBA'}</p>
+                    <p className="ed-info-item"><strong>Price:</strong> {!event.price || event.price === 0 ? <span className="ed-text-green">Free</span> : `₹${event.price}`}</p>                    {event.isOnline ? (
+                        <p className="ed-info-item"><strong>Location:</strong> <span className="ed-text-blue">Online Event</span></p>
                     ) : (
-                        <p style={{ margin: '5px 0' }}><strong>Location:</strong> {event.location || 'TBA'}</p>
+                        <p className="ed-info-item"><strong>Location:</strong> {event.location || 'TBA'}</p>
                     )}
-                    <p style={{ margin: '5px 0' }}><strong>Cancellation:</strong> {event.isRefundable ? 'Refund Available' : 'No Refund'}</p>
+                    <p className="ed-info-item"><strong>Cancellation:</strong> {event.isRefundable ? 'Refund Available' : 'No Refund'}</p>
                 </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, padding: '20px', backgroundColor: '#e0e7ff', borderRadius: '8px', border: '1px solid #c7d2fe', minWidth: '200px' }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#3730a3', fontSize: '14px', textTransform: 'uppercase' }}>Total Registrations</h4>
-                    <p style={{ fontSize: '28px', margin: 0, fontWeight: 'bold', color: '#312e81' }}>{stats.registered} / {stats.capacity}</p>
+            <div className="ed-stats-row">
+                <div className="ed-stat-card-purple">
+                    <h4 className="ed-stat-h4">Total Registrations</h4>
+                    <p className="ed-stat-value">{stats.registered} / {stats.capacity}</p>
                 </div>
-                <div style={{ flex: 1, padding: '20px', backgroundColor: '#d1fae5', borderRadius: '8px', border: '1px solid #a7f3d0', minWidth: '200px' }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#065f46', fontSize: '14px', textTransform: 'uppercase' }}>Available Seats</h4>
-                    <p style={{ fontSize: '28px', margin: 0, fontWeight: 'bold', color: '#064e3b' }}>{stats.available}</p>
+                <div className="ed-stat-card-green">
+                    <h4 className="ed-stat-h4-green">Available Seats</h4>
+                    <p className="ed-stat-value-green">{stats.available}</p>
                 </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
+            <div className="ed-main-row">
 
                 {expired && userRole !== 'ADMIN' ? (
-                    <div className="card" style={{ flex: 1, minWidth: '300px', alignSelf: 'flex-start', padding: '25px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <h3 style={{ margin: '0 0 10px 0', color: '#0f172a' }}>This event has ended</h3>
-                        <p style={{ margin: 0, color: '#64748B', fontSize: '15px' }}>
+                    <div className="ed-panel">
+                        <h3 className="ed-panel-title">This event has ended</h3>
+                        <p className="ed-panel-text">
                             No new registrations are accepted for this event. Your tickets, if any, remain available under <strong>My Tickets</strong>.
                         </p>
                     </div>
                 ) : (
                 <>
                 {!alreadyRegistered && (
-                <div className="card" style={{ flex: '1', minWidth: '300px', alignSelf: 'flex-start' }}>
-                    <h3 style={{ marginTop: 0 }}>Register</h3>
+                <div className="card ed-register-card">
+                    <h3 className="ed-register-title">Register</h3>
 
-                    {error && <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>{error}</div>}
-                    {success && <div style={{ backgroundColor: '#D1FAE5', color: '#047857', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>{success}</div>}
+                    {error && <div className="ed-error">{error}</div>}
+                    {success && <div className="ed-success">{success}</div>}
 
-                    <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <form onSubmit={handleRegister} className="ed-form">
                         <div>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>Full Name</label>
-                            <input type="text" name="name" value={formData.name} onChange={handleInputChange} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
+                            <label className="ed-label">Full Name</label>
+                            <input type="text" name="name" value={formData.name} onChange={handleInputChange} required className="ed-input" />
                         </div>
 
                         {/* NEW: Mobile Number Field */}
                         <div>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>Mobile Number</label>
-                            <input type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleInputChange} required placeholder="10-digit mobile number" style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }} />
+                            <label className="ed-label">Mobile Number</label>
+                            <input type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleInputChange} required placeholder="10-digit mobile number" className="ed-input" />
                         </div>
 
                         <div>
-                            <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B' }}>Email Address</label>
-                            <input type="email" name="email" value={formData.email} onChange={handleInputChange} required style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}/>
+                            <label className="ed-label">Email Address</label>
+                            <input type="email" name="email" value={formData.email} onChange={handleInputChange} required className="ed-input"/>
                         </div>
-                        <button type="submit" className="btn" style={{ marginTop: '10px', width: '100%', backgroundColor: stats.available === 0 ? '#d97706' : '#4f46e5' }}>
+                        <button type="submit" className={stats.available === 0 ? 'btn ed-btn-waitlist' : 'btn ed-btn-register'}>
                             {stats.available > 0 ? 'Register Now' : 'Join Waitlist'}
                         </button>
                     </form>
                 </div>
                 )}
 
-                <div style={{ flex: '2', minWidth: '400px' }}>
+                <div className="ed-main-col">
                     {userRole === 'ADMIN' ? (
                         <>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                                <h3 style={{ margin: 0 }}>All Attendees (Admin View)</h3>
-                                <input type="text" placeholder="Search attendees..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: '200px', padding: '6px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                            <div className="ed-toolbar">
+                                <h3 className="ed-h3-flush">All Attendees (Admin View)</h3>
+                                <input type="text" placeholder="Search attendees..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="ed-search-input" />
                             </div>
 
                             {sortedAttendees.length === 0 ? (
-                                <p style={{ color: '#64748B' }}>No attendees found.</p>
+                                <p className="ed-muted">No attendees found.</p>
                             ) : (
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <table className="ed-table">
                                     <thead>
-                                    <tr style={{ backgroundColor: '#1e293b', color: 'white', textAlign: 'left' }}>
-                                        <th style={{ padding: '12px' }}>Name</th>
-                                        <th style={{ padding: '12px' }}>Email</th>
-                                        <th style={{ padding: '12px' }}>Status</th>
-                                        <th style={{ padding: '12px' }}>Amount</th>
-                                        <th style={{ padding: '12px' }}>Invoice</th>
-                                        <th style={{ padding: '12px' }}>Payment</th>
-                                        <th style={{ padding: '12px' }}>Actions</th>
+                                    <tr>
+                                        <th className="ed-cell">Name</th>
+                                        <th className="ed-cell">Email</th>
+                                        <th className="ed-cell">Status</th>
+                                        <th className="ed-cell">Amount</th>
+                                        <th className="ed-cell">Invoice</th>
+                                        <th className="ed-cell">Payment</th>
+                                        <th className="ed-cell">Actions</th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                     {sortedAttendees.map(a => {
                                         // Visual handling for different statuses
-                                        let statusColor = '#16a34a'; // CONFIRMED
-                                        let bgColor = '#dcfce3';
+                                        let statusClass = 'ed-badge-green'; // CONFIRMED
                                         if (a.status === 'WAITLISTED') {
-                                            statusColor = '#d97706'; bgColor = '#fef3c7';
+                                            statusClass = 'ed-badge-orange';
                                         } else if (a.status === 'CHECKED_IN') {
-                                            statusColor = '#4f46e5'; bgColor = '#e0e7ff';
+                                            statusClass = 'ed-badge-indigo';
                                         }
                                         const isPaidEvent = event.price > 0;
                                         const hasPayment = !!paymentByAttendee[a.id];
                                         const paymentLabel = !isPaidEvent
-                                            ? { label: '—', color: '#94a3b8', bg: 'transparent' }
+                                            ? '—'
                                             : hasPayment
-                                                ? { label: 'Paid', color: '#16a34a', bg: '#dcfce3' }
-                                                : { label: 'Pending', color: '#d97706', bg: '#fef3c7' };
+                                                ? 'Paid'
+                                                : 'Pending';
+                                        const paymentClass = !isPaidEvent
+                                            ? 'ed-badge-slate'
+                                            : hasPayment
+                                                ? 'ed-badge-green ed-badge-pay-xs'
+                                                : 'ed-badge-orange ed-badge-pay-xs';
 
                                         return (
-                                            <tr key={a.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                                <td style={{ padding: '12px' }}>{a.name}</td>
-                                                <td style={{ padding: '12px' }}>{a.email}</td>
-                                                <td style={{ padding: '12px' }}>
-                                                <span style={{ color: statusColor, fontWeight: '600', backgroundColor: bgColor, padding: '4px 8px', borderRadius: '12px', fontSize: '12px' }}>
+                                            <tr key={a.id} className="ed-row">
+                                                <td className="ed-cell">{a.name}</td>
+                                                <td className="ed-cell">{a.email}</td>
+                                                <td className="ed-cell">
+                                                <span className={`ed-badge ${statusClass}`}>
                                                     {a.status || 'CONFIRMED'}
                                                 </span>
                                                 </td>
-                                                <td style={{ padding: '12px' }}>
+                                                <td className="ed-cell">
                                                     {paymentByAttendee[a.id] ? `₹${paymentByAttendee[a.id].amount}` : '—'}
                                                 </td>
-                                                <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: '13px' }}>
+                                                <td className="ed-cell ed-td-mono">
                                                     {paymentByAttendee[a.id]?.invoiceNo || '—'}
                                                 </td>
-                                                <td style={{ padding: '12px' }}>
-                                                    <span style={{ color: paymentLabel.color, backgroundColor: paymentLabel.bg, fontWeight: '600', padding: '3px 8px', borderRadius: '12px', fontSize: '12px' }}>{paymentLabel.label}</span>
+                                                <td className="ed-cell">
+                                                    <span className={`ed-badge ${paymentClass}`}>{paymentLabel}</span>
                                                 </td>
                                                 {/* FIX: Cleaned up Action Buttons */}
-                                                <td style={{ padding: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                <td className="ed-cell ed-td-actions">
                                                     {a.status === 'CONFIRMED' && (
                                                         <button
                                                             onClick={() => handleCheckIn(a)}
                                                             disabled={!a.ticketUuid}
                                                             title={!a.ticketUuid ? "Legacy User: No Ticket UUID" : "Check In Attendee"}
-                                                            style={{
-                                                                padding: '6px 10px',
-                                                                backgroundColor: a.ticketUuid ? '#3b82f6' : '#9ca3af',
-                                                                color: 'white', border: 'none', borderRadius: '4px',
-                                                                cursor: a.ticketUuid ? 'pointer' : 'not-allowed'
-                                                            }}>
+                                                            className={a.ticketUuid ? 'ed-btn-checkin ed-btn-checkin-on' : 'ed-btn-checkin ed-btn-checkin-off'}>
                                                             Check In
                                                         </button>
                                                     )}
-                                                    <Link to={`/edit-attendee/${a.id}`} className="btn btn-small btn-secondary" style={{ padding: '6px 10px' }}>Edit</Link>
-                                                    <button onClick={() => handleDeleteAttendee(a.id)} className="btn btn-small btn-danger" style={{ padding: '6px 10px', border: 'none', cursor: 'pointer' }}>Delete</button>
+                                                    <Link to={`/edit-attendee/${a.id}`} className="btn btn-small btn-secondary ed-btn-xs">Edit</Link>
+                                                    <button onClick={() => handleDeleteAttendee(a.id)} className="btn btn-small btn-danger ed-btn-xs">Delete</button>
                                                 </td>
                                             </tr>
                                         )})}
@@ -310,43 +309,43 @@ const EventDetails = () => {
                                 </table>
                             )}
 
-                            <div style={{ marginTop: '30px' }}>
-                                <h3 style={{ margin: '0 0 15px 0' }}>Refunds</h3>
+                            <div className="ed-refunds">
+                                <h3 className="ed-h3">Refunds</h3>
                                 {cancelledPayments.length > 0 && (
-                                    <p style={{ margin: '0 0 12px 0', padding: '10px 14px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '13px', color: '#92400e' }}>
+                                    <p className="ed-cancel-note">
                                         {cancelledPayments.length} cancelled registration(s): refundable events are marked <strong>Refunded</strong>, non-refundable cancellations are <strong>Forfeited</strong>, and free cancellations show <strong>No Refund (Free)</strong>.
                                     </p>
                                 )}
                                 {cancelledPayments.length === 0 ? (
-                                    <p style={{ color: '#64748B' }}>No cancellations for this event yet.</p>
+                                    <p className="ed-muted">No cancellations for this event yet.</p>
                                 ) : (
-                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <table className="ed-table">
                                         <thead>
-                                        <tr style={{ backgroundColor: '#334155', color: 'white', textAlign: 'left' }}>
-                                            <th style={{ padding: '12px' }}>Attendee</th>
-                                            <th style={{ padding: '12px' }}>Amount</th>
-                                            <th style={{ padding: '12px' }}>Invoice</th>
-                                            <th style={{ padding: '12px' }}>Date of Registration</th>
-                                            <th style={{ padding: '12px' }}>Refund Status</th>
-                                            <th style={{ padding: '12px' }}>Date of Cancellation</th>
+                                        <tr>
+                                            <th className="ed-cell">Attendee</th>
+                                            <th className="ed-cell">Amount</th>
+                                            <th className="ed-cell">Invoice</th>
+                                            <th className="ed-cell">Date of Registration</th>
+                                            <th className="ed-cell">Refund Status</th>
+                                            <th className="ed-cell">Date of Cancellation</th>
                                         </tr>
                                         </thead>
                                         <tbody>
                                         {cancelledPayments.map(p => {
                                             const r = refundBadge(p.refundStatus);
                                             const status = r || (p.amount === 0
-                                                ? { label: 'No Refund (Free)', color: '#475569', bg: '#e2e8f0' }
-                                                : { label: 'Cancelled', color: '#b91c1c', bg: '#fee2e2' });
+                                                ? { label: 'No Refund (Free)', cls: 'ed-free-cancel' }
+                                                : { label: 'Cancelled', cls: 'ed-cancelled' });
                                             return (
-                                                <tr key={p.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                                    <td style={{ padding: '12px' }}>{p.attendeeName || '—'}</td>
-                                                    <td style={{ padding: '12px' }}>{p.amount === 0 ? 'Free' : `₹${p.amount}`}</td>
-                                                    <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: '13px' }}>{p.invoiceNo}</td>
-                                                    <td style={{ padding: '12px' }}>{formatDateTime(p.paidAt)}</td>
-                                                    <td style={{ padding: '12px' }}>
-                                                        <span style={{ color: status.color, backgroundColor: status.bg, fontWeight: '600', padding: '3px 10px', borderRadius: '12px', fontSize: '12px' }}>{status.label}</span>
+                                                <tr key={p.id} className="ed-row">
+                                                    <td className="ed-cell">{p.attendeeName || '—'}</td>
+                                                    <td className="ed-cell">{p.amount === 0 ? 'Free' : `₹${p.amount}`}</td>
+                                                    <td className="ed-cell ed-td-mono">{p.invoiceNo}</td>
+                                                    <td className="ed-cell">{formatDateTime(p.paidAt)}</td>
+                                                    <td className="ed-cell">
+                                                        <span className={`ed-refund-badge ${status.cls}`}>{status.label}</span>
                                                     </td>
-                                                    <td style={{ padding: '12px' }}>{formatDateTime(p.cancelledAt)}</td>
+                                                    <td className="ed-cell">{formatDateTime(p.cancelledAt)}</td>
                                                 </tr>
                                             );
                                         })}
@@ -356,45 +355,30 @@ const EventDetails = () => {
                             </div>
                         </>
                     ) : (
-                        <div className="card" style={{ padding: '25px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                            <h3 style={{ margin: '0 0 15px 0', color: '#0f172a' }}>My Registration Status</h3>
+                        <div className="ed-box">
+                            <h3 className="ed-h3-dark">My Registration Status</h3>
                             {attendees.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                                    <p style={{ fontSize: '16px', color: '#334155' }}>Your current status for this event is:
-                                        <span style={{
-                                            marginLeft: '10px',
-                                            color: attendees[0].status === 'WAITLISTED' ? '#d97706' : (attendees[0].status === 'CHECKED_IN' ? '#4f46e5' : '#16a34a'),
-                                            fontWeight: '600',
-                                            backgroundColor: attendees[0].status === 'WAITLISTED' ? '#fef3c7' : (attendees[0].status === 'CHECKED_IN' ? '#e0e7ff' : '#dcfce3'),
-                                            padding: '6px 12px',
-                                            borderRadius: '12px'
-                                        }}>
+                                <div className="ed-col">
+                                    <p className="ed-p16">Your current status for this event is:
+                                        <span className={`ed-status-inline ${attendees[0].status === 'WAITLISTED' ? 'ed-status-waitlist' : (attendees[0].status === 'CHECKED_IN' ? 'ed-status-checkedin' : 'ed-status-confirmed')}`}>
                                             {attendees[0].status || 'CONFIRMED'}
                                         </span>
                                     </p>
 
                                     {event.price > 0 && (
-                                        <p style={{ fontSize: '14px', color: '#334155', margin: '12px 0 0 0' }}>
+                                        <p className="ed-p14">
                                             <strong>Amount Paid:</strong> ₹{event.price}{' '}
-                                            <span style={{
-                                                color: event.isRefundable ? '#16a34a' : '#d97706',
-                                                fontWeight: '600',
-                                                backgroundColor: event.isRefundable ? '#dcfce3' : '#fef3c7',
-                                                padding: '3px 10px',
-                                                borderRadius: '12px',
-                                                fontSize: '12px',
-                                                marginLeft: '6px'
-                                            }}>
+                                            <span className={`ed-refund-badge ed-ml ${event.isRefundable ? 'ed-refundable' : 'ed-nonrefundable'}`}>
                                                 {event.isRefundable ? 'Refundable' : 'Non-refundable'}
                                             </span>
                                         </p>
                                     )}
 
                                     {attendees[0].qrCodeBase64 && (
-                                        <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: '8px', textAlign: 'center', alignSelf: 'stretch' }}>
-                                            <h4 style={{ margin: '0 0 10px 0', color: '#475569' }}>Your Entry Ticket</h4>
-                                            <img src={attendees[0].qrCodeBase64} alt="QR Code Ticket" style={{ width: '150px', height: '150px' }} />
-                                            <p style={{ margin: '10px 0 0 0', fontSize: '12px', color: '#94a3b8', fontFamily: 'monospace' }}>
+                                        <div className="ed-ticket-box">
+                                            <h4 className="ed-ticket-h4">Your Entry Ticket</h4>
+                                            <img src={attendees[0].qrCodeBase64} alt="QR Code Ticket" className="ed-qr" />
+                                            <p className="ed-ticket-id">
                                                 ID: {attendees[0].ticketUuid}
                                             </p>
                                         </div>
@@ -403,14 +387,14 @@ const EventDetails = () => {
                                     {attendees[0].status !== 'CHECKED_IN' && (
                                         <button
                                             onClick={() => handleDeleteAttendee(attendees[0].id)}
-                                            style={{ marginTop: '20px', padding: '10px 15px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}
+                                            className="ed-btn-cancel"
                                         >
                                             Cancel My Registration
                                         </button>
                                     )}
                                 </div>
                             ) : (
-                                <p style={{ color: '#64748B', fontSize: '15px' }}>You have not registered for this event yet. Use the form to secure your spot or join the waitlist.</p>
+                                <p className="ed-muted-lg">You have not registered for this event yet. Use the form to secure your spot or join the waitlist.</p>
                             )}
                             </div>
                     )}

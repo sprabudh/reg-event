@@ -3,7 +3,7 @@ import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import EventsList from './pages/EventsList';
 import EventDetails from './pages/EventDetails';
-import EventForm from './pages/EventForm'; // NEW: Replaces CreateEvent and EditEvent
+import EventForm from './pages/EventForm';
 import EditAttendee from './pages/EditAttendee';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -24,7 +24,7 @@ function App() {
     return (
         <BrowserRouter>
             <Navbar />
-            <div style={{ padding: '20px 40px' }}>
+            <div className="app-shell">
                 <Routes>
                     {/* Public Routes */}
                     <Route path="/login" element={<Login />} />

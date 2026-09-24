@@ -28,14 +28,14 @@ const Dashboard = () => {
     }, []);
 
     return (
-        <div style={{ padding: '50px 20px', maxWidth: '850px', margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif', textAlign: 'center' }}>
+        <div className="dl-wrap">
 
             {/* Dynamic Sales & Marketing Hero Section */}
-            <div style={{ marginBottom: '40px' }}>
-                <h1 style={{ color: '#111827', fontSize: '38px', fontWeight: '800', letterSpacing: '-0.02em', margin: '0 0 12px 0' }}>
+            <div className="dl-hero">
+                <h1 className="dl-h1">
                     {userRole === 'ADMIN' ? 'Your Event Command Center' : 'Discover Your Next Experience'}
                 </h1>
-                <p style={{ color: '#6b7280', fontSize: '18px', maxWidth: '600px', margin: '0 auto', lineHeight: '1.5' }}>
+                <p className="dl-sub">
                     {userRole === 'ADMIN'
                         ? 'Seamlessly manage registrations, track capacity, and deliver unforgettable experiences to your attendees.'
                         : 'Browse our exclusive catalog, secure your spot, and get ready for unforgettable moments.'}
@@ -43,25 +43,25 @@ const Dashboard = () => {
             </div>
 
             {/* Central Focal Point: Core Metric & Call to Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '60px' }}>
+            <div className="dl-metric-col">
 
                 {/* Solitary Highlighted Metric */}
-                <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '16px', padding: '30px 60px', boxShadow: '0 4px 10px rgba(0,0,0,0.04)', marginBottom: '30px' }}>
-                    <h3 style={{ margin: '0 0 5px 0', color: '#6b7280', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' }}>
+                <div className="dl-metric">
+                    <h3 className="dl-metric-label">
                         Total Active Events
                     </h3>
-                    <h2 style={{ margin: '0', fontSize: '56px', color: '#4f46e5', fontWeight: '900' }}>
+                    <h2 className="dl-metric-value">
                         {totalEvents}
                     </h2>
                 </div>
 
                 {/* Primary Action Buttons */}
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <Link to="/events" style={{ padding: '14px 28px', backgroundColor: '#ffffff', color: '#374151', border: '1px solid #d1d5db', textDecoration: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', transition: 'all 0.2s' }}>
+                <div className="dl-cta-row">
+                    <Link to="/events" className="dl-btn-outline">
                         Browse Catalog
                     </Link>
                     {userRole === 'ADMIN' && (
-                        <Link to="/create-event" style={{ padding: '14px 28px', backgroundColor: '#4f46e5', color: 'white', border: '1px solid #4f46e5', textDecoration: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', boxShadow: '0 4px 6px rgba(79, 70, 229, 0.2)' }}>
+                        <Link to="/create-event" className="dl-btn-solid">
                             Launch New Event
                         </Link>
                     )}
@@ -69,36 +69,36 @@ const Dashboard = () => {
             </div>
 
             {/* Recent Events Table */}
-            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.03)', overflow: 'hidden', textAlign: 'left' }}>
-                <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb', textAlign: 'center' }}>
-                    <h3 style={{ margin: 0, color: '#374151', fontSize: '14px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div className="dl-table-card">
+                <div className="dl-table-head">
+                    <h3 className="dl-table-title">
                         Latest Opportunities
                     </h3>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
+                <div className="dl-scroll">
                     {recentEvents.length === 0 ? (
-                        <p style={{ padding: '40px', margin: 0, color: '#6b7280', textAlign: 'center' }}>
+                        <p className="dl-empty">
                             No events currently scheduled. Check back soon!
                         </p>
                     ) : (
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table className="dl-table">
                             <thead>
-                            <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
-                                <th style={{ padding: '16px 24px', color: '#9ca3af', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase' }}>Event Name</th>
-                                <th style={{ padding: '16px 24px', color: '#9ca3af', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', textAlign: 'center' }}>Date</th>
-                                <th style={{ padding: '16px 24px', color: '#9ca3af', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', textAlign: 'center' }}>Capacity</th>
-                                <th style={{ padding: '16px 24px', color: '#9ca3af', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', textAlign: 'right' }}>Action</th>
+                            <tr className="dl-thead">
+                                <th className="dl-th">Event Name</th>
+                                <th className="dl-th dl-th-c">Date</th>
+                                <th className="dl-th dl-th-c">Capacity</th>
+                                <th className="dl-th dl-th-r">Action</th>
                             </tr>
                             </thead>
                             <tbody>
                             {recentEvents.map(event => (
-                                <tr key={event.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                    <td style={{ padding: '18px 24px', color: '#111827', fontSize: '15px', fontWeight: '600' }}>{event.name}</td>
-                                    <td style={{ padding: '18px 24px', color: '#4b5563', fontSize: '14px', textAlign: 'center' }}>{event.date}</td>
-                                    <td style={{ padding: '18px 24px', color: '#4b5563', fontSize: '14px', textAlign: 'center' }}>{event.capacity} seats</td>
-                                    <td style={{ padding: '18px 24px', textAlign: 'right' }}>
-                                        <Link to={`/events/${event.id}`} style={{ color: '#4f46e5', textDecoration: 'none', fontSize: '14px', fontWeight: '600' }}>
+                                <tr key={event.id} className="dl-row">
+                                    <td className="dl-td-name">{event.name}</td>
+                                    <td className="dl-td-c">{event.date}</td>
+                                    <td className="dl-td-c">{event.capacity} seats</td>
+                                    <td className="dl-td-r">
+                                        <Link to={`/events/${event.id}`} className="dl-link">
                                             Secure Spot &rarr;
                                         </Link>
                                     </td>

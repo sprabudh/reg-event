@@ -4,5 +4,5 @@ public enum RegistrationStatus {
     CONFIRMED,
     WAITLISTED,
     CHECKED_IN, // New: Scanned at the door
-    NO_SHOW     // New: Did not arrive
+    NOT_IN    // New: Did not arrive
 }

@@ -71,14 +71,14 @@ const EventsList = () => {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div className="el-toolbar">
                 <h2>Event coming up...</h2>
                 {userRole === 'ADMIN' && (
                     <Link to="/create-event" className="btn">+ Create Event</Link>
                 )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <div className="el-filters">
                 <input
                     type="text"
                     placeholder="Search events by name..."
@@ -87,7 +87,7 @@ const EventsList = () => {
                         setSearchTerm(e.target.value);
                         setCurrentPage(0);
                     }}
-                    style={{ maxWidth: '300px', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', flex: 1 }}
+                    className="el-search"
                 />
 
                 <select
@@ -96,7 +96,7 @@ const EventsList = () => {
                         setSelectedCategoryId(e.target.value);
                         setCurrentPage(0);
                     }}
-                    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', minWidth: '150px' }}
+                    className="el-select"
                 >
                     <option value="">All Categories</option>
                     {/* Dynamically map categories for the filter dropdown */}
@@ -108,74 +108,73 @@ const EventsList = () => {
                 {(searchTerm || selectedCategoryId) && (
                     <button
                         type="button"
-                        className="btn btn-secondary"
+                        className="btn btn-secondary el-clear"
                         onClick={() => {
                             setSearchTerm('');
                             setSelectedCategoryId('');
                             setCurrentPage(0);
                         }}
-                        style={{ padding: '8px 16px', borderRadius: '4px' }}
                     >
                         Clear Filters
                     </button>
                 )}
             </div>
 
-            {errorMessage && <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>⚠️ {errorMessage}</div>}
+            {errorMessage && <div className="el-error">⚠️ {errorMessage}</div>}
 
             {/* Replaced Table with Responsive Card Grid Layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px' }}>
+            <div className="el-grid">
                 {events.length === 0 ? (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px dashed #d1d5db' }}>
+                    <div className="el-empty">
                         No events found matching your criteria.
                     </div>
                 ) : (
                     events.map((event) => {
                         const registrationStatus = registrations[event.id];
                         let actionText = 'Book Tickets';
-                        let actionColor = '#4f46e5';
+                        let isWaitlistAction = false;
                         if (registrationStatus === 'WAITLISTED') {
                             actionText = 'Waitlisted';
-                            actionColor = '#d97706';
+                            isWaitlistAction = true;
                         } else if (registrationStatus === 'CONFIRMED' || registrationStatus === 'CHECKED_IN') {
                             actionText = 'View Ticket';
                         }
 
                         if (userRole === 'ADMIN') {
                             actionText = 'Manage Event';
-                            actionColor = '#4f46e5';
+                            isWaitlistAction = false;
                         }
 
                         return (
-                        <div key={event.id} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px', backgroundColor: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ margin: '0 0 15px 0', color: '#111827', fontSize: '1.25rem' }}>
+                        <div key={event.id} className="el-card">
+                            <h3 className="el-title">
                                 {event.name}
                                 {event.expired && (
-                                    <span style={{ marginLeft: '8px', fontSize: '12px', fontWeight: '600', color: '#b91c1c', backgroundColor: '#fee2e2', padding: '3px 10px', borderRadius: '12px', verticalAlign: 'middle' }}>Ended</span>
+                                    <span className="el-ended">Ended</span>
                                 )}
                             </h3>
 
-                            <div style={{ marginBottom: '20px', color: '#4b5563', fontSize: '14px', flexGrow: 1 }}>
-                                <p style={{ margin: '8px 0', display: 'flex', justifyContent: 'space-between' }}>
+                            <div className="el-details">
+                                <p className="el-row">
                                     <strong>Date:</strong> <span>{event.date}</span>
                                 </p>
-                                <p style={{ margin: '8px 0', display: 'flex', justifyContent: 'space-between' }}>
+                                <p className="el-row">
                                     <strong>Category:</strong> <span>{event.category ? event.category.name : 'N/A'}</span>
                                 </p>
-                                <p style={{ margin: '8px 0', display: 'flex', justifyContent: 'space-between' }}>
+                                <p className="el-row">
                                     <strong>Capacity:</strong> <span>{event.capacity} seats</span>
                                 </p>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                <Link to={`/events/${event.id}`} style={{ padding: '10px 16px', backgroundColor: actionColor, color: 'white', textDecoration: 'none', borderRadius: '6px', fontWeight: '500', fontSize: '14px', flex: 1, textAlign: 'center', transition: 'background-color 0.2s' }}>
+                            <div className="el-actions">
+                                <Link to={`/events/${event.id}`} className={`el-btn-act ${isWaitlistAction ? 'el-bg-waitlist' : 'el-bg-book'}`}>
                                     {actionText}
                                 </Link>
 
                                 {userRole === 'ADMIN' && (
                                     <>
-                                        <Link to={`/edit-event/${event.id}`} style={{ padding: '10px 16px', backgroundColor: '#6b7280', color: 'white', textDecoration: 'none', borderRadius: '6px', fontWeight: '500', fontSize: '14px', textAlign: 'center' }}>Edit</Link>
-                                        <button onClick={() => handleDelete(event.id)} style={{ padding: '10px 16px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '500', fontSize: '14px', cursor: 'pointer' }}>Delete</button>
+                                        <Link to={`/edit-event/${event.id}`} className="el-btn-edit">Edit</Link>
+                                        <button onClick={() => handleDelete(event.id)} className="el-btn-del">Delete</button>
                                     </>
                                 )}
                             </div>
@@ -187,9 +186,9 @@ const EventsList = () => {
 
             {/* Pagination remains the same */}
             {totalPages > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '30px' }}>
+                <div className="el-pager">
                     <button className="btn btn-secondary" disabled={currentPage === 0} onClick={() => setCurrentPage(currentPage - 1)}>Previous</button>
-                    <span style={{ fontSize: '14px', fontWeight: '500' }}>Page {currentPage + 1} of {totalPages}</span>
+                    <span className="el-page-txt">Page {currentPage + 1} of {totalPages}</span>
                     <button className="btn btn-secondary" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(currentPage + 1)}>Next</button>
                 </div>
             )}

@@ -34,29 +34,29 @@ const EditAttendee = () => {
     };
 
     return (
-        <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+        <div className="ea-wrap">
             {/* Standardized Go Back Link */}
             <span
                 onClick={() => navigate(-1)}
-                style={{ cursor: 'pointer', color: '#64748B', fontWeight: '500', display: 'inline-block', marginBottom: '20px' }}
+                className="ea-back"
             >
                 ← Go Back
             </span>
 
             {/* Standardized Card Container */}
             <div className="card">
-                <h2 style={{ marginTop: 0, marginBottom: '20px' }}>Edit Attendee</h2>
+                <h2 className="ea-title">Edit Attendee</h2>
 
                 {/* Standardized Error Banner */}
                 {error && (
-                    <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
+                    <div className="alert-error">
                         {error}
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <form onSubmit={handleSubmit} className="ea-form">
                     <div>
-                        <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B', display: 'block', marginBottom: '5px' }}>
+                        <label className="ea-label">
                             Full Name
                         </label>
                         <input
@@ -65,11 +65,11 @@ const EditAttendee = () => {
                             value={formData.name}
                             onChange={handleChange}
                             required
-                            style={{ width: '100%', boxSizing: 'border-box' }}
+                            className="ea-input"
                         />
                     </div>
                     <div>
-                        <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B', display: 'block', marginBottom: '5px' }}>
+                        <label className="ea-label">
                             Email Address
                         </label>
                         <input
@@ -78,12 +78,12 @@ const EditAttendee = () => {
                             value={formData.email}
                             onChange={handleChange}
                             required
-                            style={{ width: '100%', boxSizing: 'border-box' }}
+                            className="ea-input"
                         />
                     </div>
 
                     {/* Standardized Button */}
-                    <button type="submit" className="btn" style={{ marginTop: '10px' }}>
+                    <button type="submit" className="btn ea-submit">
                         Save Changes
                     </button>
                 </form>

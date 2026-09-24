@@ -35,18 +35,18 @@ const ManageCategories = () => {
     };
 
     return (
-        <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+        <div className="mc-wrap">
             <h2>Manage Event Categories</h2>
-            {error && <div style={{ color: 'red', marginBottom: '10px' }}>⚠️ {error}</div>}
+            {error && <div className="mc-error">⚠️ {error}</div>}
 
-            <form onSubmit={handleAdd} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                <input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} required placeholder="New category name..." style={{ padding: '8px', flex: 1 }}/>
+            <form onSubmit={handleAdd} className="mc-form">
+                <input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} required placeholder="New category name..." className="mc-input"/>
                 <button type="submit" className="btn">+ Add</button>
             </form>
 
-            <ul style={{ listStyle: 'none', padding: 0 }}>
+            <ul className="mc-list">
                 {categories.map(cat => (
-                    <li key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #ddd' }}>
+                    <li key={cat.id} className="mc-item">
                         {cat.name}
                         <button onClick={() => handleDelete(cat.id)} className="btn btn-small btn-danger">Remove</button>
                     </li>
