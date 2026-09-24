@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -33,6 +34,7 @@ public class Attendee {
     @Column(nullable = false)
     private String email;
 
+    @Pattern(regexp = "^\\d{10}$", message = "Mobile number must be exactly 10 digits")
     @Column(name = "mobile_number")
     private String mobileNumber;
 

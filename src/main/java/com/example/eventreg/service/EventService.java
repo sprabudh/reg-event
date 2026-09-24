@@ -2,13 +2,18 @@ package com.example.eventreg.service;
 
 import com.example.eventreg.entity.Event;
 import com.example.eventreg.exception.EventDeletionException;
+import com.example.eventreg.exception.EventExpiredException;
 import com.example.eventreg.exception.EventNotFoundException;
 import com.example.eventreg.repository.AttendeeRepository;
 import com.example.eventreg.repository.EventRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class EventService {
@@ -20,11 +25,24 @@ public class EventService {
     private AttendeeRepository attendeeRepository;
 
     public Event createEvent(Event event) {
+        if (event.isExpired()) {
+            throw new EventExpiredException("Cannot create event: the scheduled start time has already passed.");
+        }
         return eventRepository.save(event);
     }
 
-    public Page<Event> getAllEvents(String name, Long categoryId, Pageable pageable) {
-        return eventRepository.searchEvents(name, categoryId, pageable);
+    public Page<Event> getAllEvents(String name, Long categoryId, Pageable pageable, boolean includeExpired) {
+        if (includeExpired) return eventRepository.searchEvents(name, categoryId, pageable);
+
+        // Fetch ALL matches, filter out ended events, THEN apply pagination.
+        // (Filtering after pagination incorrectly shrinks the page and total count.)
+        List<Event> all = eventRepository.searchEvents(name, categoryId, Pageable.unpaged()).getContent().stream()
+                .filter(event -> !event.isExpired())
+                .collect(Collectors.toList());
+
+        int start = (int) Math.min(pageable.getOffset(), all.size());
+        int end = (int) Math.min((long) start + pageable.getPageSize(), all.size());
+        return new PageImpl<>(all.subList(start, end), pageable, all.size());
     }
 
     public Event getEventById(Long id) {
@@ -33,6 +51,9 @@ public class EventService {
     }
 
     public Event updateEvent(Long id, Event eventDetails) {
+            if (eventDetails.isExpired()) {
+                throw new EventExpiredException("Cannot save event: the scheduled start time has already passed.");
+            }
             Event event = getEventById(id);
             event.setName(eventDetails.getName());
             event.setDate(eventDetails.getDate());

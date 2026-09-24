@@ -68,7 +68,7 @@ const EventForm = () => {
 
         apiCall
             .then(() => navigate('/events'))
-            .catch(() => setError(`Failed to ${isEditMode ? 'update' : 'create'} event.`));
+            .catch((err) => setError(err.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} event.`));
     };
 
     return (

@@ -56,6 +56,24 @@ public class AttendeeController {
         return ResponseEntity.ok(attendee);
     }
 
+    @GetMapping("/attendees/me")
+    public ResponseEntity<Page<com.example.eventreg.dto.MyTicketResponse>> getMyTickets(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            java.security.Principal principal) {
+
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        return ResponseEntity.ok(attendeeService.getMyTickets(principal.getName(), PageRequest.of(page, size)));
+    }
+
+    @GetMapping("/attendees/me/registrations")
+    public ResponseEntity<java.util.List<com.example.eventreg.dto.RegistrationSummary>> getMyRegistrations(java.security.Principal principal) {
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        return ResponseEntity.ok(attendeeService.getMyRegistrations(principal.getName()));
+    }
+
     @PutMapping("/attendees/{id}")
     public ResponseEntity<Attendee> updateAttendee(@PathVariable Long id, @Valid @RequestBody Attendee attendeeDetails) {
         Attendee updatedAttendee = attendeeService.updateAttendee(id, attendeeDetails);

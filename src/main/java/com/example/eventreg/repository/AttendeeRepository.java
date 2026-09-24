@@ -26,4 +26,10 @@ public interface AttendeeRepository extends JpaRepository<Attendee, Long> {
     Page<Attendee> findByEventIdAndEmail(Long eventId, String email, Pageable pageable);
 
     java.util.Optional<Attendee> findByEventIdAndTicketUuid(Long eventId, String ticketUuid);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "event")
+    Page<Attendee> findByEmailAndStatusIn(String email, java.util.List<com.example.eventreg.entity.RegistrationStatus> statuses, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "event")
+    java.util.List<Attendee> findByEmail(String email);
 }

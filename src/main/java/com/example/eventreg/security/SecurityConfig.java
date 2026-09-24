@@ -47,6 +47,9 @@ public class SecurityConfig {
                         // Admins only for editing attendees
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/attendees/**").hasAuthority("ADMIN")
 
+                        // Payment/refund data is admin-only
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/events/*/payments").hasAuthority("ADMIN")
+
                         // Everyone else who is logged in can view events and attendees
                         .anyRequest().authenticated()
                 )

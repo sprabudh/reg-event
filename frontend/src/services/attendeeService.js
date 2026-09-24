@@ -8,6 +8,18 @@ export const getAttendeesByEvent = (eventId, page = 0, size = 100) => {
     return api.get(`/events/${eventId}/attendees?page=${page}&size=${size}`);
 };
 
+export const getMyTickets = (page = 0, size = 100) => {
+    return api.get(`/attendees/me`, { params: { page, size } });
+};
+
+export const getMyRegistrations = () => {
+    return api.get(`/attendees/me/registrations`);
+};
+
+export const getEventPayments = (eventId) => {
+    return api.get(`/events/${eventId}/payments`);
+};
+
 export const getAttendeeById = (id) => {
     return api.get(`/attendees/${id}`);
 };

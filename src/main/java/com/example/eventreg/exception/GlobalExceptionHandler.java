@@ -26,7 +26,13 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(ex.getMessage(), HttpStatus.CONFLICT);
     }
 
-    // 3. Catches Validation errors (e.g., empty name, invalid email format)
+    // 3. Catches "Event already ended" registration attempts
+    @ExceptionHandler(EventExpiredException.class)
+    public ResponseEntity<Map<String, Object>> handleEventExpiredException(EventExpiredException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    // 4. Catches Validation errors (e.g., empty name, invalid email format)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
@@ -43,7 +49,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    // 4. Catches all other unexpected server errors (500)
+    // 5. Catches all other unexpected server errors (500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGlobalException(Exception ex) {
         return buildErrorResponse("An unexpected error occurred: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);

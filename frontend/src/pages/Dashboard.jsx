@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getEvents } from '../services/eventService';
+import { getMyRegistrations } from '../services/attendeeService';
 import { Link } from 'react-router-dom';
 import { getUserRole } from '../services/authService';
 
@@ -9,12 +10,21 @@ const Dashboard = () => {
     const userRole = getUserRole();
 
     useEffect(() => {
-        getEvents(0, 5)
-            .then(response => {
-                setTotalEvents(response.data.totalElements);
-                setRecentEvents(response.data.content);
+        Promise.all([getEvents(0, 100), getMyRegistrations()])
+            .then(([eventsRes, regRes]) => {
+                const events = eventsRes.data.content || [];
+                setTotalEvents(eventsRes.data.totalElements);
+
+                const registeredIds = new Set((regRes.data || []).map(r => r.eventId));
+
+                const opportunities = events
+                    .filter(e => !e.expired && !registeredIds.has(e.id))
+                    .sort((a, b) => b.id - a.id) // newest first
+                    .slice(0, 4);
+
+                setRecentEvents(opportunities);
             })
-            .catch(error => console.error("Error fetching events:", error));
+            .catch(error => console.error("Error fetching dashboard data:", error));
     }, []);
 
     return (

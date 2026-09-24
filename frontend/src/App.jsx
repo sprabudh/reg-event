@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import { isAuthenticated } from './services/authService';
 import AdminRegister from './pages/AdminRegister';
 import ManageCategories from "./pages/ManageCategories.jsx";
+import MyTickets from './pages/MyTickets';
 
 // This acts as a guard. If there is no token, it kicks them to the login screen!
 const ProtectedRoute = ({ children }) => {
@@ -33,6 +34,7 @@ function App() {
                     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/events" element={<ProtectedRoute><EventsList /></ProtectedRoute>} />
                     <Route path="/events/:id" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
+                    <Route path="/my-tickets" element={<ProtectedRoute><MyTickets /></ProtectedRoute>} />
 
                     {/* UPDATED: Both routes now use the shared EventForm component */}
                     <Route path="/create-event" element={<ProtectedRoute><EventForm /></ProtectedRoute>} />

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { isAuthenticated, logoutUser, getUserRole } from '../services/authService';
+import { isAuthenticated, getUserRole } from '../services/authService';
 
 const Navbar = () => {
     const loggedIn = isAuthenticated();
@@ -26,6 +26,11 @@ const Navbar = () => {
                     <>
                         <Link to="/" style={{ color: '#61dafb', textDecoration: 'none', marginRight: '20px', fontSize: '18px' }}>Dashboard</Link>
                         <Link to="/events" style={{ color: '#61dafb', textDecoration: 'none', marginRight: '20px', fontSize: '18px' }}> Events</Link>
+
+                        {/* Only show My Tickets link for regular attendees */}
+                        {userRole === 'USER' && (
+                            <Link to="/my-tickets" style={{ color: '#61dafb', textDecoration: 'none', marginRight: '20px', fontSize: '18px' }}> My Tickets</Link>
+                        )}
 
                         {/* Only show the Categories link if the user is an ADMIN */}
                         {userRole === 'ADMIN' && (

@@ -35,8 +35,19 @@ public class EventController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        Page<Event> events = eventService.getAllEvents(name, categoryId, PageRequest.of(page, size));
+        boolean isAdmin = isAdmin();
+
+        // Admins see every event (including ended ones); users only see upcoming events
+        Page<Event> events = eventService.getAllEvents(name, categoryId, PageRequest.of(page, size), isAdmin);
         return ResponseEntity.ok(events);
+    }
+
+    private boolean isAdmin() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null) return false;
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN"));
     }
 
     @GetMapping("/{id}")

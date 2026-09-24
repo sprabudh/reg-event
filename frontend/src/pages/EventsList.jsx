@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { getEvents, deleteEvent } from '../services/eventService';
 import { getCategories } from '../services/categoryService';
 import { getUserRole } from '../services/authService';
+import { getMyRegistrations } from '../services/attendeeService';
 
 const EventsList = () => {
     const [events, setEvents] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [registrations, setRegistrations] = useState({});
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
@@ -16,20 +18,8 @@ const EventsList = () => {
 
     const userRole = getUserRole();
 
-    // Fetch dynamic categories on mount
-    useEffect(() => {
-        getCategories()
-            .then(res => setCategories(res.data))
-            .catch(() => console.error("Failed to fetch categories"));
-    }, []);
-
-    // Reload events when page, search term, or selected category changes
-    useEffect(() => {
-        loadEvents();
-    }, [currentPage, searchTerm, selectedCategoryId]);
-
     const loadEvents = () => {
-        getEvents(currentPage, 6, searchTerm, selectedCategoryId) // Changed to 6 per page for a better grid layout
+        getEvents(currentPage, 15, searchTerm, selectedCategoryId) // 3 full rows of 5 cards per page
             .then((response) => {
                 setEvents(response.data.content);
                 setTotalPages(response.data.totalPages);
@@ -37,6 +27,33 @@ const EventsList = () => {
             })
             .catch((error) => console.error("Error fetching events:", error));
     };
+
+    // Fetch dynamic categories on mount
+    useEffect(() => {
+        getCategories()
+            .then(res => setCategories(res.data))
+            .catch(() => console.error("Failed to fetch categories"));
+    }, []);
+
+    // Fetch the current user's registrations (eventId -> status) so cards can show the right action
+    useEffect(() => {
+        if (userRole === 'USER') {
+            getMyRegistrations()
+                .then(res => {
+                    const map = {};
+                    (res.data || []).forEach(r => {
+                        map[r.eventId] = r.status;
+                    });
+                    setRegistrations(map);
+                })
+                .catch(() => console.error("Failed to fetch registrations"));
+        }
+    }, [userRole]);
+
+    // Reload events when page, search term, or selected category changes
+    useEffect(() => {
+        loadEvents();
+    }, [currentPage, searchTerm, selectedCategoryId]);
 
     const handleDelete = (id) => {
         if (window.confirm("Are you sure you want to delete this event?")) {
@@ -107,15 +124,36 @@ const EventsList = () => {
             {errorMessage && <div style={{ backgroundColor: '#FEE2E2', color: '#B91C1C', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>⚠️ {errorMessage}</div>}
 
             {/* Replaced Table with Responsive Card Grid Layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px' }}>
                 {events.length === 0 ? (
                     <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px dashed #d1d5db' }}>
                         No events found matching your criteria.
                     </div>
                 ) : (
-                    events.map((event) => (
+                    events.map((event) => {
+                        const registrationStatus = registrations[event.id];
+                        let actionText = 'Book Tickets';
+                        let actionColor = '#4f46e5';
+                        if (registrationStatus === 'WAITLISTED') {
+                            actionText = 'Waitlisted';
+                            actionColor = '#d97706';
+                        } else if (registrationStatus === 'CONFIRMED' || registrationStatus === 'CHECKED_IN') {
+                            actionText = 'View Ticket';
+                        }
+
+                        if (userRole === 'ADMIN') {
+                            actionText = 'Manage Event';
+                            actionColor = '#4f46e5';
+                        }
+
+                        return (
                         <div key={event.id} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px', backgroundColor: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ margin: '0 0 15px 0', color: '#111827', fontSize: '1.25rem' }}>{event.name}</h3>
+                            <h3 style={{ margin: '0 0 15px 0', color: '#111827', fontSize: '1.25rem' }}>
+                                {event.name}
+                                {event.expired && (
+                                    <span style={{ marginLeft: '8px', fontSize: '12px', fontWeight: '600', color: '#b91c1c', backgroundColor: '#fee2e2', padding: '3px 10px', borderRadius: '12px', verticalAlign: 'middle' }}>Ended</span>
+                                )}
+                            </h3>
 
                             <div style={{ marginBottom: '20px', color: '#4b5563', fontSize: '14px', flexGrow: 1 }}>
                                 <p style={{ margin: '8px 0', display: 'flex', justifyContent: 'space-between' }}>
@@ -130,8 +168,8 @@ const EventsList = () => {
                             </div>
 
                             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                <Link to={`/events/${event.id}`} style={{ padding: '10px 16px', backgroundColor: '#4f46e5', color: 'white', textDecoration: 'none', borderRadius: '6px', fontWeight: '500', fontSize: '14px', flex: 1, textAlign: 'center', transition: 'background-color 0.2s' }}>
-                                    {userRole === 'ADMIN' ? 'Manage Event  ' : 'Book Tickets'}
+                                <Link to={`/events/${event.id}`} style={{ padding: '10px 16px', backgroundColor: actionColor, color: 'white', textDecoration: 'none', borderRadius: '6px', fontWeight: '500', fontSize: '14px', flex: 1, textAlign: 'center', transition: 'background-color 0.2s' }}>
+                                    {actionText}
                                 </Link>
 
                                 {userRole === 'ADMIN' && (
@@ -142,7 +180,8 @@ const EventsList = () => {
                                 )}
                             </div>
                         </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 
