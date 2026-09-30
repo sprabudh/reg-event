@@ -4,12 +4,23 @@ import { getEvents, deleteEvent } from '../services/eventService';
 import { getCategories } from '../services/categoryService';
 import { getUserRole } from '../services/authService';
 import { getMyRegistrations } from '../services/attendeeService';
+import {
+    APP_ROUTES,
+    ERROR_MESSAGES,
+    PAGINATION,
+    PROMPTS,
+    REGISTRATION_STATUS,
+    ROLES,
+    buildEditEventPath,
+    buildEventDetailPath
+} from '../constants';
+import { getErrorMessage } from '../utils/errors';
 
 const EventsList = () => {
     const [events, setEvents] = useState([]);
     const [categories, setCategories] = useState([]);
     const [registrations, setRegistrations] = useState({});
-    const [currentPage, setCurrentPage] = useState(0);
+    const [currentPage, setCurrentPage] = useState(PAGINATION.DEFAULT_PAGE);
     const [totalPages, setTotalPages] = useState(0);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,9 +28,11 @@ const EventsList = () => {
     const [errorMessage, setErrorMessage] = useState('');
 
     const userRole = getUserRole();
+    const isAdmin = userRole === ROLES.ADMIN;
 
     const loadEvents = () => {
-        getEvents(currentPage, 15, searchTerm, selectedCategoryId) // 3 full rows of 5 cards per page
+        // 3 full rows of 5 cards per page
+        getEvents(currentPage, PAGINATION.EVENTS_PAGE_SIZE, searchTerm, selectedCategoryId)
             .then((response) => {
                 setEvents(response.data.content);
                 setTotalPages(response.data.totalPages);
@@ -37,7 +50,7 @@ const EventsList = () => {
 
     // Fetch the current user's registrations (eventId -> status) so cards can show the right action
     useEffect(() => {
-        if (userRole === 'USER') {
+        if (userRole === ROLES.USER) {
             getMyRegistrations()
                 .then(res => {
                     const map = {};
@@ -56,15 +69,11 @@ const EventsList = () => {
     }, [currentPage, searchTerm, selectedCategoryId]);
 
     const handleDelete = (id) => {
-        if (window.confirm("Are you sure you want to delete this event?")) {
+        if (window.confirm(PROMPTS.DELETE_EVENT)) {
             deleteEvent(id)
                 .then(() => loadEvents())
                 .catch((error) => {
-                    if (error.response && error.response.data) {
-                        setErrorMessage(error.response.data.message);
-                    } else {
-                        setErrorMessage("Failed to delete event.");
-                    }
+                    setErrorMessage(getErrorMessage(error, ERROR_MESSAGES.LOAD_EVENTS_FAILED));
                 });
         }
     };
@@ -73,8 +82,8 @@ const EventsList = () => {
         <div>
             <div className="el-toolbar">
                 <h2>Event coming up...</h2>
-                {userRole === 'ADMIN' && (
-                    <Link to="/create-event" className="btn">+ Create Event</Link>
+                {isAdmin && (
+                    <Link to={APP_ROUTES.CREATE_EVENT} className="btn">+ Create Event</Link>
                 )}
             </div>
 
@@ -85,7 +94,7 @@ const EventsList = () => {
                     value={searchTerm}
                     onChange={(e) => {
                         setSearchTerm(e.target.value);
-                        setCurrentPage(0);
+                        setCurrentPage(PAGINATION.DEFAULT_PAGE);
                     }}
                     className="el-search"
                 />
@@ -94,7 +103,7 @@ const EventsList = () => {
                     value={selectedCategoryId}
                     onChange={(e) => {
                         setSelectedCategoryId(e.target.value);
-                        setCurrentPage(0);
+                        setCurrentPage(PAGINATION.DEFAULT_PAGE);
                     }}
                     className="el-select"
                 >
@@ -105,19 +114,19 @@ const EventsList = () => {
                     ))}
                 </select>
 
-                {(searchTerm || selectedCategoryId) && (
-                    <button
-                        type="button"
-                        className="btn btn-secondary el-clear"
-                        onClick={() => {
-                            setSearchTerm('');
-                            setSelectedCategoryId('');
-                            setCurrentPage(0);
-                        }}
-                    >
-                        Clear Filters
-                    </button>
-                )}
+                    {(searchTerm || selectedCategoryId) && (
+                        <button
+                            type="button"
+                            className="btn btn-secondary el-clear"
+                            onClick={() => {
+                                setSearchTerm('');
+                                setSelectedCategoryId('');
+                                setCurrentPage(PAGINATION.DEFAULT_PAGE);
+                            }}
+                        >
+                            Clear Filters
+                        </button>
+                    )}
             </div>
 
             {errorMessage && <div className="el-error">⚠️ {errorMessage}</div>}
@@ -133,14 +142,17 @@ const EventsList = () => {
                         const registrationStatus = registrations[event.id];
                         let actionText = 'Book Tickets';
                         let isWaitlistAction = false;
-                        if (registrationStatus === 'WAITLISTED') {
+                        if (registrationStatus === REGISTRATION_STATUS.WAITLISTED) {
                             actionText = 'Waitlisted';
                             isWaitlistAction = true;
-                        } else if (registrationStatus === 'CONFIRMED' || registrationStatus === 'CHECKED_IN') {
+                        } else if (
+                            registrationStatus === REGISTRATION_STATUS.CONFIRMED ||
+                            registrationStatus === REGISTRATION_STATUS.CHECKED_IN
+                        ) {
                             actionText = 'View Ticket';
                         }
 
-                        if (userRole === 'ADMIN') {
+                        if (isAdmin) {
                             actionText = 'Manage Event';
                             isWaitlistAction = false;
                         }
@@ -167,13 +179,13 @@ const EventsList = () => {
                             </div>
 
                             <div className="el-actions">
-                                <Link to={`/events/${event.id}`} className={`el-btn-act ${isWaitlistAction ? 'el-bg-waitlist' : 'el-bg-book'}`}>
+                                <Link to={buildEventDetailPath(event.id)} className={`el-btn-act ${isWaitlistAction ? 'el-bg-waitlist' : 'el-bg-book'}`}>
                                     {actionText}
                                 </Link>
 
-                                {userRole === 'ADMIN' && (
+                                {isAdmin && (
                                     <>
-                                        <Link to={`/edit-event/${event.id}`} className="el-btn-edit">Edit</Link>
+                                        <Link to={buildEditEventPath(event.id)} className="el-btn-edit">Edit</Link>
                                         <button onClick={() => handleDelete(event.id)} className="el-btn-del">Delete</button>
                                     </>
                                 )}

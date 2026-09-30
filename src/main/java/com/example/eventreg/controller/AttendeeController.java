@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.GrantedAuthority; // Added import for GrantedAuthority
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -35,10 +36,11 @@ public class AttendeeController {
 
         String userEmail = principal.getName();
 
-        // FIX: Check for both "ADMIN" and "ROLE_ADMIN" to ensure the Admin is correctly identified
+        // FIX: Explicitly mapped the stream to GrantedAuthority strings to prevent compilation errors
         boolean isAdmin = org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication().getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN"));
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN") || role.equals("ADMIN"));
 
         if (isAdmin) {
             // ADMIN gets all attendees for the event
@@ -75,9 +77,24 @@ public class AttendeeController {
     }
 
     @PutMapping("/attendees/{id}")
-    public ResponseEntity<Attendee> updateAttendee(@PathVariable Long id, @Valid @RequestBody Attendee attendeeDetails) {
-        Attendee updatedAttendee = attendeeService.updateAttendee(id, attendeeDetails);
+    public ResponseEntity<Attendee> updateAttendee(@PathVariable Long id,
+                                                  @Valid @RequestBody Attendee attendeeDetails,
+                                                  java.security.Principal principal) {
+        Attendee updatedAttendee = attendeeService.updateAttendee(id, attendeeDetails, isAdmin(), principalEmail(principal));
         return ResponseEntity.ok(updatedAttendee);
+    }
+
+    /** Admin check mirrors EventController.isAdmin(). */
+    private boolean isAdmin() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null) return false;
+        return auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN"));
+    }
+
+    private String principalEmail(java.security.Principal principal) {
+        return principal == null ? null : principal.getName();
     }
 
     @DeleteMapping("/attendees/{id}")
@@ -87,7 +104,6 @@ public class AttendeeController {
     }
 
     // --- Fast-Path Scanner Endpoint ---
-    // Make sure this says @PostMapping
     @PostMapping("/events/{eventId}/checkin/{ticketUuid}")
     public ResponseEntity<?> checkInAttendee(@PathVariable Long eventId, @PathVariable String ticketUuid) {
         try {

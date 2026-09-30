@@ -1,6 +1,7 @@
 package com.example.eventreg.security;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -23,6 +24,15 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
 
+    /**
+     * Vite auto-increments the dev port (5173 -> 5174 -> ...) when a port is
+     * already taken, which silently breaks every API call with a CORS
+     * preflight 403. Keep the list in application.properties up to date with
+     * whichever port you actually run the frontend on.
+     */
+    @Value("${application.security.cors.allowed-origins}")
+    private List<String> allowedOrigins;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -44,8 +54,10 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/events/**").hasAuthority("ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/events/**").hasAuthority("ADMIN")
 
-                        // Admins only for editing attendees
-                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/attendees/**").hasAuthority("ADMIN")
+                        // Attendee edits are open to any logged-in user, but AttendeeService
+                        // enforces that a non-admin may only edit their OWN registration
+                        // (email match, not checked in, and email itself is immutable).
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/attendees/**").authenticated()
 
                         // Payment/refund data is admin-only
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/events/*/payments").hasAuthority("ADMIN")
@@ -63,7 +75,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getMyTickets, deleteAttendee } from '../services/attendeeService';
-
-const STATUS_COLORS = {
-    CONFIRMED: 'bd-green',
-    CHECKED_IN: 'bd-indigo',
-};
+import {
+    APP_ROUTES,
+    DEFAULT_STATUS_BADGE_CLASS,
+    ERROR_MESSAGES,
+    PROMPTS,
+    REFUND_STATUS,
+    REGISTRATION_STATUS,
+    STATUS_BADGE_CLASSES,
+    SUCCESS_MESSAGES,
+    buildEventDetailPath
+} from '../constants';
 
 const MyTickets = () => {
     const [tickets, setTickets] = useState([]);
@@ -18,7 +24,7 @@ const MyTickets = () => {
             .then((res) => {
                 setTickets(res.data.content || []);
             })
-            .catch(() => setError('Failed to load your tickets. Please try again later.'))
+            .catch(() => setError(ERROR_MESSAGES.LOAD_TICKETS_FAILED))
             .finally(() => setLoading(false));
     }, []);
 
@@ -27,18 +33,18 @@ const MyTickets = () => {
     );
 
     const handleCancel = (ticket) => {
-        if (!window.confirm(`Cancel your registration for "${ticket.eventName || 'this event'}"?`)) return;
+        if (!window.confirm(PROMPTS.cancelRegistrationFor(ticket.eventName))) return;
         deleteAttendee(ticket.id)
             .then(() => {
                 setTickets((prev) => prev.filter((t) => t.id !== ticket.id));
-                setSuccess('Registration cancelled successfully.');
+                setSuccess(SUCCESS_MESSAGES.CANCEL_REGISTRATION_OK);
                 setTimeout(() => setSuccess(''), 3000);
             })
-            .catch(() => setError('Failed to cancel registration. Please try again.'));
+            .catch(() => setError(ERROR_MESSAGES.CANCEL_REGISTRATION_FAILED));
     };
 
     const handlePrint = (ticket) => {
-        const statusClass = STATUS_COLORS[ticket.status] || 'bd-default';
+        const statusClass = STATUS_BADGE_CLASSES[ticket.status] || DEFAULT_STATUS_BADGE_CLASS;
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
@@ -81,7 +87,7 @@ const MyTickets = () => {
                             <p><strong>Attendee:</strong> ${ticket.name}</p>
                             <p><strong>Email:</strong> ${ticket.email}</p>
                             <p><strong>Event:</strong> ${ticket.eventLocation ? ticket.eventLocation : (ticket.eventIsOnline ? 'Online Event' : 'TBA')}</p>
-                            <p><strong>Status:</strong> <span class="status-badge">${ticket.status || 'CONFIRMED'}</span></p>
+                            <p><strong>Status:</strong> <span class="status-badge">${ticket.status || REGISTRATION_STATUS.CONFIRMED}</span></p>
                             <p><strong>Ticket ID:</strong></p>
                             <p class="ticket-id">${ticket.ticketUuid || 'N/A'}</p>
                             ${ticket.amount && ticket.amount > 0
@@ -115,14 +121,14 @@ const MyTickets = () => {
                     <p className="mt-empty-text">
                         You haven't registered for any events yet.
                     </p>
-                    <Link to="/events" className="mt-empty-link">
+                    <Link to={APP_ROUTES.EVENTS} className="mt-empty-link">
                         Browse Events to secure your spot
                     </Link>
                 </div>
             ) : (
                 <div className="mt-grid">
                     {sortedTickets.map((ticket) => {
-                        const badgeClass = STATUS_COLORS[ticket.status] || 'bd-default';
+                        const badgeClass = STATUS_BADGE_CLASSES[ticket.status] || DEFAULT_STATUS_BADGE_CLASS;
 
                         return (
                             <div key={ticket.id} className="card mt-card">
@@ -154,7 +160,7 @@ const MyTickets = () => {
                                         <p className="mt-row">
                                             <strong>Status:</strong>{' '}
                                             <span className={`badge-pill mt-status ${badgeClass}`}>
-                                                {ticket.status || 'CONFIRMED'}
+                                                {ticket.status || REGISTRATION_STATUS.CONFIRMED}
                                             </span>
                                         </p>
                                         {ticket.amount && ticket.amount > 0 ? (
@@ -168,11 +174,11 @@ const MyTickets = () => {
                                                 {ticket.invoiceNo && (
                                                     <p className="mt-row"><strong>Invoice:</strong> <span className="font-mono">{ticket.invoiceNo}</span></p>
                                                 )}
-                                                {ticket.refundStatus && ticket.refundStatus !== 'NONE' && (
+                                                {ticket.refundStatus && ticket.refundStatus !== REFUND_STATUS.NONE && (
                                                     <p className="mt-row">
                                                         <strong>Refund:</strong>{' '}
-                                                        <span className={`badge-pill ${ticket.refundStatus === 'REFUNDED' ? 'bd-green' : 'bd-orange'}`}>
-                                                            {ticket.refundStatus === 'REFUNDED' ? 'Refunded' : 'Forfeited'}
+                                                        <span className={`badge-pill ${ticket.refundStatus === REFUND_STATUS.REFUNDED ? 'bd-green' : 'bd-orange'}`}>
+                                                            {ticket.refundStatus === REFUND_STATUS.REFUNDED ? 'Refunded' : 'Forfeited'}
                                                         </span>
                                                     </p>
                                                 )}
@@ -194,10 +200,10 @@ const MyTickets = () => {
                                     <button onClick={() => handlePrint(ticket)} className="mt-btn-print">
                                         Print / Save PDF
                                     </button>
-                                    <Link to={`/events/${ticket.eventId}`} className="btn btn-small btn-secondary mt-btn-view">
+                                    <Link to={buildEventDetailPath(ticket.eventId)} className="btn btn-small btn-secondary mt-btn-view">
                                         View Event
                                     </Link>
-                                    {ticket.status !== 'CHECKED_IN' && (
+                                    {ticket.status !== REGISTRATION_STATUS.CHECKED_IN && (
                                         <button onClick={() => handleCancel(ticket)} className="mt-btn-cancel">
                                             Cancel Registration
                                         </button>

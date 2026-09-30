@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getCategories, createCategory, deleteCategory } from '../services/categoryService';
 import { getUserRole } from '../services/authService';
-import { useNavigate } from 'react-router-dom';
+import { APP_ROUTES, ERROR_MESSAGES, PROMPTS, ROLES } from '../constants';
+import { getErrorMessage } from '../utils/errors';
 
 const ManageCategories = () => {
     const [categories, setCategories] = useState([]);
@@ -9,14 +11,19 @@ const ManageCategories = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    useEffect(() => {
-        if (getUserRole() !== 'ADMIN') navigate('/events');
-        fetchCategories();
-    }, [navigate]);
+    const fetchCategories = useCallback(() => {
+        getCategories()
+            .then(res => setCategories(res.data))
+            .catch(() => setError(ERROR_MESSAGES.LOAD_CATEGORIES_FAILED));
+    }, []);
 
-    const fetchCategories = () => {
-        getCategories().then(res => setCategories(res.data)).catch(() => setError("Failed to load"));
-    };
+    useEffect(() => {
+        if (getUserRole() !== ROLES.ADMIN) {
+            navigate(APP_ROUTES.EVENTS);
+            return;
+        }
+        fetchCategories();
+    }, [navigate, fetchCategories]);
 
     const handleAdd = (e) => {
         e.preventDefault();
@@ -24,13 +31,13 @@ const ManageCategories = () => {
             setNewCategory('');
             setError('');
             fetchCategories();
-        }).catch(err => setError(err.response?.data || "Failed to add category"));
+        }).catch(err => setError(getErrorMessage(err, ERROR_MESSAGES.ADD_CATEGORY_FAILED)));
     };
 
     const handleDelete = (id) => {
-        if(window.confirm("Delete this category?")) {
+        if (window.confirm(PROMPTS.DELETE_CATEGORY)) {
             deleteCategory(id).then(() => fetchCategories())
-                .catch(err => setError(err.response?.data || "Cannot delete category in use."));
+                .catch(err => setError(getErrorMessage(err, ERROR_MESSAGES.DELETE_CATEGORY_IN_USE)));
         }
     };
 
@@ -55,4 +62,5 @@ const ManageCategories = () => {
         </div>
     );
 };
+
 export default ManageCategories;

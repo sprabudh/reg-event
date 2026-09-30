@@ -51,7 +51,10 @@ tr:last-child td {
 /* Standardized Inputs */
 input[type="text"],
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="time"] {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid #CBD5E1;
@@ -150,7 +153,6 @@ button:hover, .btn:hover {
 .ed-btn-checkin-on { background-color: #3b82f6; cursor: pointer; }
 .ed-btn-checkin-off { background-color: #9ca3af; cursor: not-allowed; }
 .ed-btn-xs { padding: 6px 10px; }
-.ed-btn-xs-danger { padding: 6px 10px; border: none; cursor: pointer; }
 .ed-refunds { margin-top: 30px; }
 .ed-h3 { margin: 0 0 15px 0; }
 .ed-cancel-note { margin: 0 0 12px 0; padding: 10px 14px; background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; font-size: 13px; color: #92400e; }
@@ -175,6 +177,9 @@ button:hover, .btn:hover {
 .ed-qr { width: 150px; height: 150px; }
 .ed-ticket-id { margin: 10px 0 0 0; font-size: 12px; color: #94a3b8; font-family: monospace; }
 .ed-btn-cancel { margin-top: 20px; padding: 10px 15px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; }
+.ed-actions-row { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+.ed-actions-row .ed-btn-cancel { margin-top: 0; }
+.ed-btn-edit { padding: 10px 15px; background-color: #6b7280; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block; }
 .ed-muted-lg { color: #64748B; font-size: 15px; }
 
 /* ===== Shared Utilities ===== */
@@ -186,8 +191,6 @@ button:hover, .btn:hover {
 .bd-orange { color: #d97706; background-color: #fef3c7; }
 .bd-indigo { color: #4f46e5; background-color: #e0e7ff; }
 .bd-default { color: #111827; background-color: #e5e7eb; }
-.bd-slate { color: #94a3b8; background-color: transparent; }
-.bd-red { color: #b91c1c; background-color: #fee2e2; }
 .txt-green { color: #10b981; font-weight: bold; }
 .font-mono { font-family: monospace; }
 
@@ -305,17 +308,8 @@ input.ef-input, select.ef-input { padding: 12px 15px; border-radius: 8px; border
 .ea-label { font-size: 12px; font-weight: bold; color: #64748B; display: block; margin-bottom: 5px; }
 input.ea-input { width: 100%; box-sizing: border-box; }
 .ea-submit { margin-top: 10px; }
-
-/* ===== AdminRegister (ar-) ===== */
-.ar-wrap { max-width: 350px; margin: 50px auto; text-align: center; background-color: #343a40; padding: 30px; border-radius: 8px; color: white; }
-.ar-title { color: #ffc107; }
-.ar-sub { font-size: 14px; margin-bottom: 20px; }
-.ar-error { color: #ff4d4d; }
-.ar-form { display: flex; flex-direction: column; gap: 15px; }
-input.ar-input { padding: 10px; border-radius: 4px; border: none; }
-.ar-btn { padding: 12px; background-color: #ffc107; color: black; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; }
-.ar-foot { margin-top: 20px; font-size: 14px; }
-.ar-link { color: #61dafb; }
+.ea-input-locked { background-color: #e2e8f0; color: #64748b; cursor: not-allowed; }
+.ea-hint { margin: 5px 0 0; font-size: 12px; color: #64748b; }
 
 /* ===== ManageCategories (mc-) ===== */
 .mc-wrap { padding: 20px; max-width: 600px; margin: 0 auto; }
@@ -328,14 +322,77 @@ input.mc-input { padding: 8px; flex: 1; }
 /* ===== App Shell ===== */
 .app-shell { padding: 20px 40px; }
 
-/* ===== Login / Register (au-, shared) ===== */
+/* ===== Login / Register Standard User Auth (au-) ===== */
 .au-wrap { display: flex; justify-content: center; padding: 60px 20px; font-family: system-ui, -apple-system, sans-serif; }
 .au-card { background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); width: 100%; max-width: 400px; border: 1px solid #eaeaea; text-align: center; }
 .au-brand { margin: 0 0 5px 0; font-size: 28px; color: #4f46e5; font-weight: 700; }
 .au-sub { margin: 0 0 25px 0; font-size: 18px; color: #6b7280; font-weight: 400; }
-.au-error { background-color: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; border: 1px solid #f87171; }
-.au-form { display: flex; flex-direction: column; gap: 15px; }
-input.au-input { padding: 12px 15px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 15px; color: #111827; outline: none; box-sizing: border-box; width: 100%; }
-.au-btn { margin-top: 5px; padding: 14px; background-color: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2); }
+
+/* The beautiful red banner from the screenshot */
+.au-error { background-color: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px; font-size: 14px; border: 1px solid #f87171; }
+
+.au-form { display: flex; flex-direction: column; gap: 15px; } /* Restored 15px gap for perfect spacing */
+
+input.au-input { padding: 12px 15px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 15px; color: #111827; outline: none; box-sizing: border-box; width: 100%; background-color: #f8fafc; }
+input.au-input:focus { border-color: #4f46e5; background-color: #ffffff; }
+
+.au-btn { padding: 14px; background-color: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2); }
 .au-linktext { margin-top: 25px; font-size: 14px; color: #6b7280; }
 .au-link { color: #4f46e5; text-decoration: none; font-weight: 600; }
+
+/* Wrapper to hold the Show/Hide button inside the input */
+.au-input-wrapper { position: relative !important; display: flex !important; align-items: center !important; width: 100% !important; }
+input.au-input-padded { padding-right: 60px !important; }
+
+/* Protects the Text Toggle from Global Button CSS */
+button.au-toggle-btn {
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    color: #4f46e5 !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    width: auto !important;
+    box-shadow: none !important;
+}
+
+button.au-toggle-btn:hover { text-decoration: underline !important; opacity: 1 !important; }
+
+/* Match validation styling below confirm password */
+.au-live-feedback { font-size: 12px; font-weight: 600; text-align: left; margin-top: -10px; padding-left: 4px; }
+.feedback-error { color: #ef4444; }
+.feedback-success { color: #10b981; }
+
+/* ===== AdminRegister (ar-) ===== */
+.ar-wrap { max-width: 350px; margin: 50px auto; text-align: center; background-color: #343a40; padding: 30px; border-radius: 8px; color: white; }
+.ar-title { color: #ffc107; margin-top: 0; }
+.ar-sub { font-size: 14px; margin-bottom: 20px; color: #ced4da; }
+.ar-error { color: #ff4d4d; font-size: 14px; background: rgba(255, 77, 77, 0.1); padding: 10px; border-radius: 6px; border: 1px solid rgba(255, 77, 77, 0.3); }
+.ar-form { display: flex; flex-direction: column; gap: 15px; }
+input.ar-input { padding: 10px 12px; border-radius: 4px; border: none; width: 100%; box-sizing: border-box; }
+.ar-btn { padding: 12px; background-color: #ffc107; color: black !important; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; transition: opacity 0.2s; }
+.ar-btn:hover { opacity: 0.9; }
+.ar-foot { margin-top: 20px; font-size: 14px; color: #ced4da; }
+.ar-link { color: #61dafb; }
+
+/* Invalid field outline driven by react-hook-form errors */
+.input-error { border-color: #ef4444 !important; }
+input.ar-input.input-error { outline: 1px solid #ff8787; }
+
+/* Inline format error under a password field, matching the original
+   red banner that sat directly beneath the input. */
+.au-format-feedback { margin-top: -5px; margin-bottom: 0; text-align: center; background-color: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px; font-size: 14px; border: 1px solid #f87171; }
+.ar-format-feedback { margin-top: -5px; margin-bottom: 0; text-align: center; color: #ff4d4d; font-size: 13px; background: rgba(255, 77, 77, 0.1); padding: 10px; border-radius: 6px; border: 1px solid rgba(255, 77, 77, 0.3); }
+
+/* ===== Layout shell (lay-) ===== */
+.lay-footer { padding: 18px 40px; margin-top: 40px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 13px; color: #64748b; background-color: #ffffff; }
+.lay-footer a { color: #4f46e5; text-decoration: none; font-weight: 600; }
+.lay-footer a:hover { text-decoration: underline; }

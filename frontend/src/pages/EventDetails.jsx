@@ -3,6 +3,24 @@ import { useParams, Link } from 'react-router-dom';
 import { getEventById, getEventStats } from '../services/eventService';
 import { getAttendeesByEvent, registerAttendee, deleteAttendee, checkInAttendee, getEventPayments } from '../services/attendeeService';
 import { getUserRole } from '../services/authService';
+import Field from '../components/ui/Field';
+import {
+    APP_ROUTES,
+    ERROR_MESSAGES,
+    FORM_LABELS,
+    MOBILE_REGEX,
+    PAGINATION,
+    PROMPTS,
+    REFUND_STATUS,
+    REGISTRATION_STATUS,
+    ROLES,
+    SUCCESS_MESSAGES,
+    TABLE_HEADERS,
+    buildEditAttendeePath,
+    getAttendeeBadgeClass,
+    getAttendeeStatusClass
+} from '../constants';
+import { getErrorMessage } from '../utils/errors';
 
 const EventDetails = () => {
     const { id } = useParams();
@@ -17,6 +35,7 @@ const EventDetails = () => {
     const [payments, setPayments] = useState([]);
 
     const userRole = getUserRole();
+    const isAdmin = userRole === ROLES.ADMIN;
 
     const loadEventDetails = () => {
         getEventById(id).then(res => setEvent(res.data)).catch(err => console.error(err));
@@ -27,19 +46,30 @@ const EventDetails = () => {
     };
 
     const loadAttendees = () => {
-        getAttendeesByEvent(id, 0, 100).then(res => setAttendees(res.data.content)).catch(err => console.error(err));
+        getAttendeesByEvent(id, PAGINATION.DEFAULT_PAGE, PAGINATION.LARGE_PAGE_SIZE)
+            .then(res => setAttendees(res.data.content))
+            .catch(err => console.error(err));
     };
 
     const loadPayments = () => {
-        if (userRole !== 'ADMIN') return;
+        if (!isAdmin) return;
         getEventPayments(id).then(res => setPayments(res.data)).catch(err => console.error(err));
     };
 
-    useEffect(() => {
-        loadEventDetails();
+    // Check-in only changes attendee-level data, so it skips the event reload.
+    const reloadAttendeeData = () => {
         loadAttendees();
         loadEventStats();
         loadPayments();
+    };
+
+    const reloadAll = () => {
+        loadEventDetails();
+        reloadAttendeeData();
+    };
+
+    useEffect(() => {
+        reloadAll();
     }, [id]);
 
     const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -49,32 +79,29 @@ const EventDetails = () => {
         setError('');
         setSuccess('');
 
-        if (!/^\d{10}$/.test(formData.mobileNumber || '')) {
-            setError('Mobile number must be exactly 10 digits.');
+        if (!MOBILE_REGEX.test(formData.mobileNumber || '')) {
+            setError(ERROR_MESSAGES.MOBILE_INVALID);
             return;
         }
 
         registerAttendee(id, formData)
             .then((res) => {
-                if (res.data && res.data.status === 'WAITLISTED') {
-                    setSuccess('Event is full. You have been added to the waitlist!');
+                if (res.data && res.data.status === REGISTRATION_STATUS.WAITLISTED) {
+                    setSuccess(SUCCESS_MESSAGES.WAITLIST_OK);
                 } else {
-                    setSuccess('Successfully registered! Your ticket has been generated.');
+                    setSuccess(SUCCESS_MESSAGES.REGISTER_OK);
                 }
-                setFormData({ name: '', email: '' });
-                loadEventDetails();
-                loadAttendees();
-                loadEventStats();
-                loadPayments();
+                setFormData({ name: '', email: '', mobileNumber: ''});
+                reloadAll();
             })
             .catch((err) => {
-                setError(err.response?.data?.message || 'Registration failed. Please try again.');
+                setError(getErrorMessage(err, ERROR_MESSAGES.ATTENDEE_REGISTRATION_FAILED));
             });
     };
 
     const handleDeleteAttendee = (attendeeId) => {
         const isPaid = event && event.price && event.price > 0;
-        const actionText = userRole === 'ADMIN' ? "Remove this attendee?" : "Cancel your registration?";
+        const actionText = isAdmin ? PROMPTS.REMOVE_ATTENDEE : PROMPTS.CANCEL_REGISTRATION;
 
         let message = actionText;
         if (isPaid) {
@@ -85,11 +112,8 @@ const EventDetails = () => {
 
         if (window.confirm(message)) {
             deleteAttendee(attendeeId).then(() => {
-                loadEventDetails();
-                loadAttendees();
-                loadEventStats();
-                loadPayments();
-                setSuccess('Registration removed successfully.');
+                reloadAll();
+                setSuccess(SUCCESS_MESSAGES.REGISTRATION_REMOVED);
             }).catch(console.error);
         }
     };
@@ -101,18 +125,16 @@ const EventDetails = () => {
 
         // Prevent crash if it's a legacy user without a ticket UUID
         if (!attendee.ticketUuid) {
-            setError('Check-in failed: This attendee was registered before the ticketing system was added and has no valid ticket ID.');
+            setError(ERROR_MESSAGES.LEGACY_TICKET_NO_UUID);
             return;
         }
 
         checkInAttendee(id, attendee.ticketUuid)
             .then(() => {
-                setSuccess(`${attendee.name} has been successfully checked in!`);
-                loadAttendees();
-                loadEventStats();
-                loadPayments();
+                setSuccess(SUCCESS_MESSAGES.CHECK_IN_OK(attendee.name));
+                reloadAttendeeData();
             })
-            .catch(err => setError(err.response?.data?.message || 'Check-in failed. Please try again.'));
+            .catch(err => setError(getErrorMessage(err, ERROR_MESSAGES.CHECK_IN_FAILED)));
     };
 
     if (!event) return <div className="ed-loading">Loading...</div>;
@@ -120,7 +142,9 @@ const EventDetails = () => {
     const expired = event.expired;
 
     const paymentByAttendee = Object.fromEntries(payments.map(p => [p.attendeeId, p]));
-    const cancelledPayments = payments.filter(p => p.refundStatus === 'REFUNDED' || p.refundStatus === 'FORFEITED' || p.cancelledAt);
+    const cancelledPayments = payments.filter(
+        p => p.refundStatus === REFUND_STATUS.REFUNDED || p.refundStatus === REFUND_STATUS.FORFEITED || p.cancelledAt
+    );
 
     const formatDateTime = (iso) => {
         if (!iso) return '—';
@@ -130,12 +154,12 @@ const EventDetails = () => {
     };
 
     const refundBadge = (refundStatus) => {
-        if (refundStatus === 'REFUNDED') return { label: 'Refunded', cls: 'ed-refunded' };
-        if (refundStatus === 'FORFEITED') return { label: 'Forfeited', cls: 'ed-forfeited' };
+        if (refundStatus === REFUND_STATUS.REFUNDED) return { label: 'Refunded', cls: 'ed-refunded' };
+        if (refundStatus === REFUND_STATUS.FORFEITED) return { label: 'Forfeited', cls: 'ed-forfeited' };
         return null;
     };
 
-    const alreadyRegistered = userRole !== 'ADMIN' && attendees.length > 0;
+    const alreadyRegistered = !isAdmin && attendees.length > 0;
 
     const filteredAttendees = attendees.filter(a =>
         a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -143,16 +167,16 @@ const EventDetails = () => {
     );
 
     const sortedAttendees = [...filteredAttendees].sort((a, b) => {
-        const statusA = a.status || 'CONFIRMED';
-        const statusB = b.status || 'CONFIRMED';
-        if (statusA === 'CONFIRMED' && statusB === 'WAITLISTED') return -1;
-        if (statusA === 'WAITLISTED' && statusB === 'CONFIRMED') return 1;
+        const statusA = a.status || REGISTRATION_STATUS.CONFIRMED;
+        const statusB = b.status || REGISTRATION_STATUS.CONFIRMED;
+        if (statusA === REGISTRATION_STATUS.CONFIRMED && statusB === REGISTRATION_STATUS.WAITLISTED) return -1;
+        if (statusA === REGISTRATION_STATUS.WAITLISTED && statusB === REGISTRATION_STATUS.CONFIRMED) return 1;
         return 0;
     });
 
     return (
         <div>
-            <Link to="/events" className="ed-back-link">← Back to Events</Link>
+            <Link to={APP_ROUTES.EVENTS} className="ed-back-link">← Back to Events</Link>
 
             <div className="card ed-event-card">
                 <h2 className="ed-event-title">
@@ -164,7 +188,7 @@ const EventDetails = () => {
                 <div className="ed-info-grid">
                     <p className="ed-info-item"><strong>Date:</strong> {event.date}</p>
                     <p className="ed-info-item"><strong>Time:</strong> {event.time || 'TBA'}</p>
-                    <p className="ed-info-item"><strong>Duration:</strong> {event.duration || 'TBA'}</p>
+                    <p className="ed-info-item"><strong>Duration:</strong> {event.duration ? (isNaN(event.duration) ? event.duration : `${event.duration} Hours`) : 'TBA'}</p>
                     <p className="ed-info-item"><strong>Price:</strong> {!event.price || event.price === 0 ? <span className="ed-text-green">Free</span> : `₹${event.price}`}</p>                    {event.isOnline ? (
                         <p className="ed-info-item"><strong>Location:</strong> <span className="ed-text-blue">Online Event</span></p>
                     ) : (
@@ -187,7 +211,7 @@ const EventDetails = () => {
 
             <div className="ed-main-row">
 
-                {expired && userRole !== 'ADMIN' ? (
+                {expired && !isAdmin ? (
                     <div className="ed-panel">
                         <h3 className="ed-panel-title">This event has ended</h3>
                         <p className="ed-panel-text">
@@ -204,21 +228,13 @@ const EventDetails = () => {
                     {success && <div className="ed-success">{success}</div>}
 
                     <form onSubmit={handleRegister} className="ed-form">
-                        <div>
-                            <label className="ed-label">Full Name</label>
-                            <input type="text" name="name" value={formData.name} onChange={handleInputChange} required className="ed-input" />
-                        </div>
+                        <Field variant="ed" label={FORM_LABELS.FULL_NAME} name="name" value={formData.name} onChange={handleInputChange} required />
 
                         {/* NEW: Mobile Number Field */}
-                        <div>
-                            <label className="ed-label">Mobile Number</label>
-                            <input type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleInputChange} required placeholder="10-digit mobile number" className="ed-input" />
-                        </div>
+                        <Field variant="ed" label={FORM_LABELS.MOBILE_NUMBER} type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleInputChange} required placeholder="10-digit mobile number" />
 
-                        <div>
-                            <label className="ed-label">Email Address</label>
-                            <input type="email" name="email" value={formData.email} onChange={handleInputChange} required className="ed-input"/>
-                        </div>
+                        <Field variant="ed" label={FORM_LABELS.EMAIL} type="email" name="email" value={formData.email} onChange={handleInputChange} required />
+
                         <button type="submit" className={stats.available === 0 ? 'btn ed-btn-waitlist' : 'btn ed-btn-register'}>
                             {stats.available > 0 ? 'Register Now' : 'Join Waitlist'}
                         </button>
@@ -227,7 +243,7 @@ const EventDetails = () => {
                 )}
 
                 <div className="ed-main-col">
-                    {userRole === 'ADMIN' ? (
+                    {isAdmin ? (
                         <>
                             <div className="ed-toolbar">
                                 <h3 className="ed-h3-flush">All Attendees (Admin View)</h3>
@@ -240,24 +256,15 @@ const EventDetails = () => {
                                 <table className="ed-table">
                                     <thead>
                                     <tr>
-                                        <th className="ed-cell">Name</th>
-                                        <th className="ed-cell">Email</th>
-                                        <th className="ed-cell">Status</th>
-                                        <th className="ed-cell">Amount</th>
-                                        <th className="ed-cell">Invoice</th>
-                                        <th className="ed-cell">Payment</th>
-                                        <th className="ed-cell">Actions</th>
+                                        {TABLE_HEADERS.ATTENDEES.map((header) => (
+                                            <th key={header} className="ed-cell">{header}</th>
+                                        ))}
                                     </tr>
                                     </thead>
                                     <tbody>
                                     {sortedAttendees.map(a => {
-                                        // Visual handling for different statuses
-                                        let statusClass = 'ed-badge-green'; // CONFIRMED
-                                        if (a.status === 'WAITLISTED') {
-                                            statusClass = 'ed-badge-orange';
-                                        } else if (a.status === 'CHECKED_IN') {
-                                            statusClass = 'ed-badge-indigo';
-                                        }
+                                        const status = a.status || REGISTRATION_STATUS.CONFIRMED;
+                                        const statusClass = getAttendeeBadgeClass(a.status);
                                         const isPaidEvent = event.price > 0;
                                         const hasPayment = !!paymentByAttendee[a.id];
                                         const paymentLabel = !isPaidEvent
@@ -277,7 +284,7 @@ const EventDetails = () => {
                                                 <td className="ed-cell">{a.email}</td>
                                                 <td className="ed-cell">
                                                 <span className={`ed-badge ${statusClass}`}>
-                                                    {a.status || 'CONFIRMED'}
+                                                    {status}
                                                 </span>
                                                 </td>
                                                 <td className="ed-cell">
@@ -291,7 +298,7 @@ const EventDetails = () => {
                                                 </td>
                                                 {/* FIX: Cleaned up Action Buttons */}
                                                 <td className="ed-cell ed-td-actions">
-                                                    {a.status === 'CONFIRMED' && (
+                                                    {a.status === REGISTRATION_STATUS.CONFIRMED && (
                                                         <button
                                                             onClick={() => handleCheckIn(a)}
                                                             disabled={!a.ticketUuid}
@@ -300,7 +307,7 @@ const EventDetails = () => {
                                                             Check In
                                                         </button>
                                                     )}
-                                                    <Link to={`/edit-attendee/${a.id}`} className="btn btn-small btn-secondary ed-btn-xs">Edit</Link>
+                                                    <Link to={buildEditAttendeePath(a.id)} className="btn btn-small btn-secondary ed-btn-xs">Edit</Link>
                                                     <button onClick={() => handleDeleteAttendee(a.id)} className="btn btn-small btn-danger ed-btn-xs">Delete</button>
                                                 </td>
                                             </tr>
@@ -322,12 +329,9 @@ const EventDetails = () => {
                                     <table className="ed-table">
                                         <thead>
                                         <tr>
-                                            <th className="ed-cell">Attendee</th>
-                                            <th className="ed-cell">Amount</th>
-                                            <th className="ed-cell">Invoice</th>
-                                            <th className="ed-cell">Date of Registration</th>
-                                            <th className="ed-cell">Refund Status</th>
-                                            <th className="ed-cell">Date of Cancellation</th>
+                                            {TABLE_HEADERS.REFUNDS.map((header) => (
+                                                <th key={header} className="ed-cell">{header}</th>
+                                            ))}
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -360,8 +364,8 @@ const EventDetails = () => {
                             {attendees.length > 0 ? (
                                 <div className="ed-col">
                                     <p className="ed-p16">Your current status for this event is:
-                                        <span className={`ed-status-inline ${attendees[0].status === 'WAITLISTED' ? 'ed-status-waitlist' : (attendees[0].status === 'CHECKED_IN' ? 'ed-status-checkedin' : 'ed-status-confirmed')}`}>
-                                            {attendees[0].status || 'CONFIRMED'}
+                                        <span className={`ed-status-inline ${getAttendeeStatusClass(attendees[0].status)}`}>
+                                            {attendees[0].status || REGISTRATION_STATUS.CONFIRMED}
                                         </span>
                                     </p>
 
@@ -384,13 +388,21 @@ const EventDetails = () => {
                                         </div>
                                     )}
 
-                                    {attendees[0].status !== 'CHECKED_IN' && (
-                                        <button
-                                            onClick={() => handleDeleteAttendee(attendees[0].id)}
-                                            className="ed-btn-cancel"
-                                        >
-                                            Cancel My Registration
-                                        </button>
+                                    {attendees[0].status !== REGISTRATION_STATUS.CHECKED_IN && (
+                                        <div className="ed-actions-row">
+                                            <Link
+                                                to={buildEditAttendeePath(attendees[0].id)}
+                                                className="ed-btn-edit"
+                                            >
+                                                Edit My Registration
+                                            </Link>
+                                            <button
+                                                onClick={() => handleDeleteAttendee(attendees[0].id)}
+                                                className="ed-btn-cancel"
+                                            >
+                                                Cancel My Registration
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             ) : (

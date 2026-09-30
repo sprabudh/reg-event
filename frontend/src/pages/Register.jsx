@@ -1,73 +1,90 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { registerUser } from '../services/authService';
+import { registerSchema } from '../utils/validationSchemas';
+import useAuthForm from '../hooks/useAuthForm';
+import Input from '../components/ui/Input';
+import PasswordInput from '../components/ui/PasswordInput';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import {
+    APP_ROUTES,
+    ERROR_MESSAGES,
+    FORM_LABELS,
+    PASSWORD_EXAMPLE,
+    PAGE_LABELS
+} from '../constants';
 
 const Register = () => {
-    const navigate = useNavigate();
-    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
-    const [error, setError] = useState('');
-
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setError(''); // Clear any previous errors
-
-        // NEW: Strict Password Validation
-        if (formData.password.length < 8) {
-            setError("Security Requirement: Password must be at least 8 characters long.");
-            return;
-        }
-
-        registerUser(formData)
-            .then((response) => {
-                localStorage.setItem('token', response.data.token);
-                localStorage.setItem('role', response.data.role);
-                window.location.href = '/';
-            })
-            .catch(() => setError('Registration failed. Try a different email.'));
-    };
+    const { field, errors, isSubmitting, apiError, matchState, onSubmit } = useAuthForm({
+        schema: registerSchema,
+        submit: registerUser,
+        errorMessage: ERROR_MESSAGES.REGISTRATION_FAILED,
+        buildPayload: ({ name, email, password }) => ({ name, email, password }),
+        defaultValues: { name: '', email: '', password: '', confirmPassword: '' }
+    });
 
     return (
         <div className="au-wrap">
-            <div className="au-card">
-                <h1 className="au-brand">Eventora</h1>
-                <h2 className="au-sub">Join us today</h2>
+            <Card>
+                <h1 className="au-brand">{PAGE_LABELS.BRAND}</h1>
+                <h2 className="au-sub">{PAGE_LABELS.REGISTER_SUBTITLE}</h2>
 
-                {error && <div className="au-error">{error}</div>}
+                {/* Top banner is for server-side failures only (e.g. email
+                    already exists). Field problems render under their field. */}
+                {apiError && <div className="au -error">{apiError}</div>}
 
-                <form onSubmit={handleSubmit} className="au-form">
-                    <input
+                <form onSubmit={onSubmit} className="au-form" noValidate>
+                    <Input
                         type="text"
-                        name="name"
-                        placeholder="Full Name"
-                        onChange={handleChange}
-                        required
-                        className="au-input"
+                        placeholder={FORM_LABELS.FULL_NAME}
+                        aria-invalid={errors.name ? 'true' : undefined}
+                        className={`au-input ${errors.name ? 'input-error' : ''}`}
+                        {...field('name')}
                     />
-                    <input
+                    {errors.name && (
+                        <p className="au-live-feedback feedback-error">{errors.name.message}</p>
+                    )}
+
+                    <Input
                         type="email"
-                        name="email"
-                        placeholder="Email Address"
-                        onChange={handleChange}
-                        required
-                        className="au-input"
+                        placeholder={FORM_LABELS.EMAIL}
+                        aria-invalid={errors.email ? 'true' : undefined}
+                        className={`au-input ${errors.email ? 'input-error' : ''}`}
+                        {...field('email')}
                     />
-                    <input
-                        type="password"
-                        name="password"
-                        placeholder="Password (min. 8 characters)"
-                        onChange={handleChange}
-                        required
-                        className="au-input"
+                    {errors.email && (
+                        <p className="au-live-feedback feedback-error">{errors.email.message}</p>
+                    )}
+
+                    <PasswordInput
+                        placeholder={`${FORM_LABELS.PASSWORD} (e.g., ${PASSWORD_EXAMPLE})`}
+                        autoComplete="new-password"
+                        error={errors.password?.message}
+                        aria-invalid={errors.password ? 'true' : undefined}
+                        className={errors.password ? 'input-error' : ''}
+                        {...field('password')}
                     />
-                    <button type="submit" className="au-btn">Register</button>
+
+                    <PasswordInput
+                        placeholder={FORM_LABELS.CONFIRM_PASSWORD}
+                        autoComplete="new-password"
+                        error={errors.confirmPassword?.message}
+                        matchState={matchState}
+                        aria-invalid={errors.confirmPassword ? 'true' : undefined}
+                        className={errors.confirmPassword ? 'input-error' : ''}
+                        {...field('confirmPassword')}
+                    />
+
+                    <Button type="submit" variant="auth" isLoading={isSubmitting}>
+                        {PAGE_LABELS.REGISTER_CTA}
+                    </Button>
                 </form>
 
                 <p className="au-linktext">
-                    Already have an account? <Link to="/login" className="au-link">Login here</Link>
+                    Already have an account?{' '}
+                    <Link to={APP_ROUTES.LOGIN} className="au-link">Login here</Link>
                 </p>
-            </div>
+            </Card>
         </div>
     );
 };

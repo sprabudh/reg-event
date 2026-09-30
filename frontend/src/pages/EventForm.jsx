@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { createEvent, getEventById, updateEvent } from '../services/eventService';
 import { getCategories } from '../services/categoryService';
+import Field from '../components/ui/Field';
+import { APP_ROUTES, ERROR_MESSAGES } from '../constants';
+import { getErrorMessage } from '../utils/errors';
 
 const EventForm = () => {
     const { id } = useParams();
@@ -45,7 +48,7 @@ const EventForm = () => {
                         category: event.category ? { id: event.category.id } : { id: '' }
                     });
                 })
-                .catch(() => setError('Failed to load event details.'));
+                .catch(() => setError(ERROR_MESSAGES.LOAD_EVENT_DETAILS_FAILED));
         }
     }, [id, isEditMode]);
 
@@ -67,62 +70,43 @@ const EventForm = () => {
         const apiCall = isEditMode ? updateEvent(id, payload) : createEvent(payload);
 
         apiCall
-            .then(() => navigate('/events'))
-            .catch((err) => setError(err.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} event.`));
+            .then(() => navigate(APP_ROUTES.EVENTS))
+            .catch((err) => setError(getErrorMessage(err, ERROR_MESSAGES.SAVE_EVENT_FAILED(isEditMode ? 'update' : 'create'))));
     };
 
     return (
         <div className="ef-wrap">
             <div className="ef-card">
                 <div className="ef-header">
-                    <Link to="/events" className="ef-back">← Back to Events</Link>
+                    <Link to={APP_ROUTES.EVENTS} className="ef-back">← Back to Events</Link>
                     <h2 className="ef-title">{isEditMode ? 'Edit Event' : 'Create New Event'}</h2>
                 </div>
 
                 {error && <div className="ef-error">{error}</div>}
 
                 <form onSubmit={handleSubmit} className="ef-form">
-                    <div className="ef-group">
-                        <label className="ef-label">Event Name</label>
-                        <input type="text" name="name" value={formData.name} onChange={handleChange} className="ef-input" required />
-                    </div>
+                    <Field label="Event Name" name="name" value={formData.name} onChange={handleChange} required />
 
-                    <div className="ef-group">
-                        <label className="ef-label">Event Category</label>
-                        <select name="category" value={formData.category.id} onChange={handleChange} className="ef-input" required >
+                    <Field label="Event Category" name="category" value={formData.category.id} onChange={handleChange} required>
+                        <select name="category" value={formData.category.id} onChange={handleChange} className="ef-input" required>
                             <option value="">Select a Category</option>
                             {categories.map((cat) => (
                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                             ))}
                         </select>
+                    </Field>
+
+                    <div className="ef-grid2">
+                        <Field label="Date" name="date" type="date" value={formData.date} onChange={handleChange} required />
+                        <Field label="Time" name="time" type="time" value={formData.time} onChange={handleChange} />
                     </div>
 
                     <div className="ef-grid2">
-                        <div className="ef-group">
-                            <label className="ef-label">Date</label>
-                            <input type="date" name="date" value={formData.date} onChange={handleChange} className="ef-input" required />
-                        </div>
-                        <div className="ef-group">
-                            <label className="ef-label">Time</label>
-                            <input type="time" name="time" value={formData.time} onChange={handleChange} className="ef-input" />
-                        </div>
+                        <Field label="Duration" name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g., 2 Hours" />
+                        <Field label="Capacity" name="capacity" type="number" value={formData.capacity} onChange={handleChange} required min="1" />
                     </div>
 
-                    <div className="ef-grid2">
-                        <div className="ef-group">
-                            <label className="ef-label">Duration</label>
-                            <input type="text" name="duration" value={formData.duration} onChange={handleChange} className="ef-input" placeholder="e.g., 2 Hours" />
-                        </div>
-                        <div className="ef-group">
-                            <label className="ef-label">Capacity</label>
-                            <input type="number" name="capacity" value={formData.capacity} onChange={handleChange} className="ef-input" required min="1" />
-                        </div>
-                    </div>
-
-                    <div className="ef-group">
-                        <label className="ef-label">Price (Leave empty or 0 for Free)</label>
-                        <input type="number" name="price" value={formData.price} onChange={handleChange} className="ef-input" placeholder="e.g., 50.00" min="0" step="0.01" />
-                    </div>
+                    <Field label="Price (Leave empty or 0 for Free)" name="price" type="number" value={formData.price} onChange={handleChange} placeholder="e.g., 50.00" min="0" step="0.01" />
 
                     <div className="ef-checks-row">
                         <div className="ef-check-item">
@@ -136,10 +120,7 @@ const EventForm = () => {
                     </div>
 
                     {!formData.isOnline && (
-                        <div className="ef-group">
-                            <label className="ef-label">Location</label>
-                            <input type="text" name="location" value={formData.location} onChange={handleChange} className="ef-input" placeholder="e.g., Convention Center, Hall A" />
-                        </div>
+                        <Field label="Location" name="location" value={formData.location} onChange={handleChange} placeholder="e.g., Convention Center, Hall A" />
                     )}
 
                     <button type="submit" className="ef-btn">{isEditMode ? 'Save Changes' : 'Create Event'}</button>

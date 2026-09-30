@@ -3,14 +3,25 @@ import { getEvents } from '../services/eventService';
 import { getMyRegistrations } from '../services/attendeeService';
 import { Link } from 'react-router-dom';
 import { getUserRole } from '../services/authService';
+import {
+    APP_ROUTES,
+    PAGINATION,
+    ROLES,
+    TABLE_HEADERS,
+    buildEventDetailPath
+} from '../constants';
 
 const Dashboard = () => {
     const [totalEvents, setTotalEvents] = useState(0);
     const [recentEvents, setRecentEvents] = useState([]);
     const userRole = getUserRole();
+    const isAdmin = userRole === ROLES.ADMIN;
 
     useEffect(() => {
-        Promise.all([getEvents(0, 100), getMyRegistrations()])
+        Promise.all([
+            getEvents(PAGINATION.DEFAULT_PAGE, PAGINATION.LARGE_PAGE_SIZE),
+            getMyRegistrations()
+        ])
             .then(([eventsRes, regRes]) => {
                 const events = eventsRes.data.content || [];
                 setTotalEvents(eventsRes.data.totalElements);
@@ -33,10 +44,10 @@ const Dashboard = () => {
             {/* Dynamic Sales & Marketing Hero Section */}
             <div className="dl-hero">
                 <h1 className="dl-h1">
-                    {userRole === 'ADMIN' ? 'Your Event Command Center' : 'Discover Your Next Experience'}
+                    {isAdmin ? 'Your Event Command Center' : 'Discover Your Next Experience'}
                 </h1>
                 <p className="dl-sub">
-                    {userRole === 'ADMIN'
+                    {isAdmin
                         ? 'Seamlessly manage registrations, track capacity, and deliver unforgettable experiences to your attendees.'
                         : 'Browse our exclusive catalog, secure your spot, and get ready for unforgettable moments.'}
                 </p>
@@ -57,11 +68,11 @@ const Dashboard = () => {
 
                 {/* Primary Action Buttons */}
                 <div className="dl-cta-row">
-                    <Link to="/events" className="dl-btn-outline">
+                    <Link to={APP_ROUTES.EVENTS} className="dl-btn-outline">
                         Browse Catalog
                     </Link>
-                    {userRole === 'ADMIN' && (
-                        <Link to="/create-event" className="dl-btn-solid">
+                    {isAdmin && (
+                        <Link to={APP_ROUTES.CREATE_EVENT} className="dl-btn-solid">
                             Launch New Event
                         </Link>
                     )}
@@ -85,25 +96,29 @@ const Dashboard = () => {
                         <table className="dl-table">
                             <thead>
                             <tr className="dl-thead">
-                                <th className="dl-th">Event Name</th>
-                                <th className="dl-th dl-th-c">Date</th>
-                                <th className="dl-th dl-th-c">Capacity</th>
-                                <th className="dl-th dl-th-r">Action</th>
+                                {TABLE_HEADERS.DASHBOARD_EVENTS.map((header) => (
+                                    <th
+                                        key={header}
+                                        className={`dl-th${header === 'Date' || header === 'Capacity' ? ' dl-th-c' : ''}${header === 'Action' ? ' dl-th-r' : ''}`}
+                                    >
+                                        {header}
+                                    </th>
+                                ))}
                             </tr>
                             </thead>
                             <tbody>
-                            {recentEvents.map(event => (
-                                <tr key={event.id} className="dl-row">
-                                    <td className="dl-td-name">{event.name}</td>
-                                    <td className="dl-td-c">{event.date}</td>
-                                    <td className="dl-td-c">{event.capacity} seats</td>
-                                    <td className="dl-td-r">
-                                        <Link to={`/events/${event.id}`} className="dl-link">
-                                            Secure Spot &rarr;
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))}
+                                {recentEvents.map(event => (
+                                    <tr key={event.id} className="dl-row">
+                                        <td className="dl-td-name">{event.name}</td>
+                                        <td className="dl-td-c">{event.date}</td>
+                                        <td className="dl-td-c">{event.capacity} seats</td>
+                                        <td className="dl-td-r">
+                                            <Link to={buildEventDetailPath(event.id)} className="dl-link">
+                                                Secure Spot &rarr;
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     )}

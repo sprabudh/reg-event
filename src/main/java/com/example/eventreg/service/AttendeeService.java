@@ -7,6 +7,7 @@ import com.example.eventreg.entity.RefundStatus;
 import com.example.eventreg.entity.RegistrationStatus;
 import com.example.eventreg.exception.AttendeeNotFoundException;
 import com.example.eventreg.exception.DuplicateRegistrationException;
+import com.example.eventreg.exception.NotYourRegistrationException;
 import com.example.eventreg.repository.AttendeeRepository;
 import com.example.eventreg.repository.PaymentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,7 @@ public class AttendeeService {
     private EventService eventService;
 
     @Autowired
-    private QrCodeService qrCodeService; // Inject the new service
+    private QrCodeService qrCodeService;
 
     @Autowired
     private PaymentRepository paymentRepository;
@@ -195,8 +196,26 @@ public class AttendeeService {
     }
 
     @Transactional
-    public Attendee updateAttendee(Long id, Attendee attendeeDetails) {
+    public Attendee updateAttendee(Long id, Attendee attendeeDetails, boolean isAdmin, String principalEmail) {
         Attendee attendee = getAttendeeById(id);
+
+        // Non-admins may only touch their own registration. Ownership is the
+        // email, matching how getMyTickets/getMyRegistrations already link
+        // registrations to an account.
+        if (!isAdmin) {
+            if (principalEmail == null || !principalEmail.equals(attendee.getEmail())) {
+                throw new NotYourRegistrationException("You can only edit your own registration.");
+            }
+            if (attendee.getStatus() == RegistrationStatus.CHECKED_IN) {
+                throw new NotYourRegistrationException("You cannot edit your details after check-in.");
+            }
+            // Changing the email would detach the registration from the account,
+            // so only an admin can do that.
+            if (attendeeDetails.getEmail() != null && !attendeeDetails.getEmail().equals(attendee.getEmail())) {
+                throw new NotYourRegistrationException("Only an admin can change the email on a registration.");
+            }
+        }
+
         if (!attendee.getEmail().equals(attendeeDetails.getEmail())) {
             if (attendeeRepository.existsByEmailAndEventId(attendeeDetails.getEmail(), attendee.getEvent().getId())) {
                 throw new DuplicateRegistrationException("Update failed: Email is already registered for this event");
@@ -204,6 +223,8 @@ public class AttendeeService {
         }
         attendee.setName(attendeeDetails.getName());
         attendee.setEmail(attendeeDetails.getEmail());
+        // Previously never persisted -- the field was accepted and then dropped.
+        attendee.setMobileNumber(attendeeDetails.getMobileNumber());
         return attendeeRepository.save(attendee);
     }
 

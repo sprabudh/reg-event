@@ -13,7 +13,7 @@ A robust, full-stack event management and ticketing platform designed to streaml
 - Vanilla CSS (Responsive card layouts and grids)
 
 **Backend:**
-- Java 17 / Spring Boot 3
+- Java 21 / Spring Boot 3
 - Spring Security (JWT-based stateless authentication)
 - Spring Data JPA / Hibernate
 - Google ZXing (Core library for dynamic Base64 QR code generation)

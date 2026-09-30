@@ -2,6 +2,7 @@ package com.example.eventreg.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -30,6 +31,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EventExpiredException.class)
     public ResponseEntity<Map<String, Object>> handleEventExpiredException(EventExpiredException ex) {
         return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    // 3b. Catches permission problems: editing someone else's registration,
+    // editing after check-in, or a user trying to change their own email.
+    @ExceptionHandler(NotYourRegistrationException.class)
+    public ResponseEntity<Map<String, Object>> handleNotYourRegistrationException(NotYourRegistrationException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.FORBIDDEN);
+    }
+
+    // 3c. Wrong email/password from the authentication manager. Without this
+    // it falls through to the catch-all below and is reported as a 500, which
+    // makes a simple typo look like a server fault.
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleBadCredentialsException(BadCredentialsException ex) {
+        return buildErrorResponse("Invalid email or password.", HttpStatus.UNAUTHORIZED);
     }
 
     // 4. Catches Validation errors (e.g., empty name, invalid email format)

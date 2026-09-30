@@ -1,17 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAttendeeById, updateAttendee } from '../services/attendeeService';
+import { getUserRole } from '../services/authService';
+import Field from '../components/ui/Field';
+import { ERROR_MESSAGES, FORM_LABELS, ROLES } from '../constants';
+import { getErrorMessage } from '../utils/errors';
 
 const EditAttendee = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({ name: '', email: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', mobileNumber: '' });
     const [error, setError] = useState('');
+
+    // Only an admin may change the email -- doing it as a user would detach the
+    // registration from their account. The server rejects it either way; this
+    // just makes the rule visible.
+    const isAdmin = getUserRole() === ROLES.ADMIN;
 
     useEffect(() => {
         getAttendeeById(id)
             .then(res => setFormData(res.data))
-            .catch(err => setError("Failed to load attendee data."));
+            .catch(() => setError(ERROR_MESSAGES.LOAD_ATTENDEE_FAILED));
     }, [id]);
 
     const handleChange = (e) => {
@@ -25,11 +34,7 @@ const EditAttendee = () => {
                 navigate(-1); // Automatically goes back to the Event Details page!
             })
             .catch((err) => {
-                if (err.response && err.response.data && err.response.data.message) {
-                    setError(err.response.data.message);
-                } else {
-                    setError('Failed to update attendee. Check your inputs.');
-                }
+                setError(getErrorMessage(err, ERROR_MESSAGES.UPDATE_ATTENDEE_FAILED));
             });
     };
 
@@ -45,7 +50,7 @@ const EditAttendee = () => {
 
             {/* Standardized Card Container */}
             <div className="card">
-                <h2 className="ea-title">Edit Attendee</h2>
+                <h2 className="ea-title">{isAdmin ? 'Edit Attendee' : 'Edit My Registration'}</h2>
 
                 {/* Standardized Error Banner */}
                 {error && (
@@ -55,31 +60,26 @@ const EditAttendee = () => {
                 )}
 
                 <form onSubmit={handleSubmit} className="ea-form">
+                    <Field variant="ea" label={FORM_LABELS.FULL_NAME} name="name" value={formData.name || ''} onChange={handleChange} required />
+
+                    <Field variant="ea" label={FORM_LABELS.MOBILE_NUMBER} type="tel" name="mobileNumber" value={formData.mobileNumber || ''} onChange={handleChange} placeholder="10-digit mobile number" inputMode="numeric" maxLength={10} />
+
                     <div>
                         <label className="ea-label">
-                            Full Name
-                        </label>
-                        <input
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            required
-                            className="ea-input"
-                        />
-                    </div>
-                    <div>
-                        <label className="ea-label">
-                            Email Address
+                            {FORM_LABELS.EMAIL}
                         </label>
                         <input
                             type="email"
                             name="email"
-                            value={formData.email}
+                            value={formData.email || ''}
                             onChange={handleChange}
                             required
-                            className="ea-input"
+                            readOnly={!isAdmin}
+                            className={`ea-input${isAdmin ? '' : ' ea-input-locked'}`}
                         />
+                        {!isAdmin && (
+                            <p className="ea-hint">Only an admin can change the email on a registration.</p>
+                        )}
                     </div>
 
                     {/* Standardized Button */}

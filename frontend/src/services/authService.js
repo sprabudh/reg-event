@@ -1,38 +1,41 @@
 import api from './api';
+import { API_ENDPOINTS, ALL_STORAGE_KEYS, STORAGE_KEYS } from '../constants';
+
+const { AUTH } = API_ENDPOINTS;
 
 export const loginUser = (credentials) => {
-    return api.post('/auth/authenticate', credentials);
+    return api.post(AUTH.LOGIN, credentials);
 };
 
 export const registerUser = (userData) => {
-    return api.post('/auth/register', userData);
+    return api.post(AUTH.REGISTER_USER, userData);
 };
 
 export const logoutUser = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
+    ALL_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
 };
 
 export const isAuthenticated = () => {
-    return localStorage.getItem('token') !== null;
+    return localStorage.getItem(STORAGE_KEYS.TOKEN) !== null;
 };
 
 export const getUserRole = () => {
-    return localStorage.getItem('role');
+    return localStorage.getItem(STORAGE_KEYS.ROLE);
 };
 
-export const getUserEmail = () => {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
-    try {
-        // The JWT token stores the email in the "sub" (subject) field of the payload
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.sub;
-    } catch (e) {
-        return null;
+export const getUserName = () => {
+    return localStorage.getItem(STORAGE_KEYS.USER_NAME);
+};
+
+/** Persists the session returned by any of the auth endpoints. */
+export const storeSession = ({ token, role, name }) => {
+    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+    localStorage.setItem(STORAGE_KEYS.ROLE, role);
+    if (name) {
+        localStorage.setItem(STORAGE_KEYS.USER_NAME, name);
     }
 };
 
 export const registerAdmin = (userData) => {
-    return api.post('/auth/register-admin', userData);
+    return api.post(AUTH.REGISTER_ADMIN, userData);
 };

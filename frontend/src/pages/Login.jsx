@@ -1,61 +1,67 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { loginUser } from '../services/authService';
+import { loginSchema } from '../utils/validationSchemas';
+import useAuthForm from '../hooks/useAuthForm';
+import Input from '../components/ui/Input';
+import PasswordInput from '../components/ui/PasswordInput';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import {
+    APP_ROUTES,
+    ERROR_MESSAGES,
+    FORM_LABELS,
+    PAGE_LABELS
+} from '../constants';
 
 const Login = () => {
-    const navigate = useNavigate();
-    const [formData, setFormData] = useState({ email: '', password: '' });
-    const [error, setError] = useState('');
-
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        loginUser(formData)
-            .then((response) => {
-                localStorage.setItem('token', response.data.token);
-                localStorage.setItem('role', response.data.role);
-
-                // ADD THIS LINE: Save the email they just typed in
-                localStorage.setItem('userName', response.data.name);
-
-                window.location.href = '/';
-            })
-            .catch(() => setError('Invalid email or password'));
-    };
+    const { field, errors, isSubmitting, apiError, onSubmit } = useAuthForm({
+        schema: loginSchema,
+        submit: loginUser,
+        errorMessage: ERROR_MESSAGES.AUTH_FAILED,
+        // Login shows no inline errors until you hit submit, matching the
+        // original behaviour.
+        mode: 'onSubmit',
+        defaultValues: { email: '', password: '' }
+    });
 
     return (
         <div className="au-wrap">
-            <div className="au-card">
-                <h1 className="au-brand">Eventora</h1>
-                <h2 className="au-sub">Welcome Back!</h2>
+            <Card>
+                <h1 className="au-brand">{PAGE_LABELS.BRAND}</h1>
+                <h2 className="au-sub">{PAGE_LABELS.LOGIN_SUBTITLE}</h2>
 
-                {error && <div className="au-error">{error}</div>}
+                {apiError && <div className="au-error">{apiError}</div>}
 
-                <form onSubmit={handleSubmit} className="au-form">
-                    <input
+                <form onSubmit={onSubmit} className="au-form" noValidate>
+                    <Input
                         type="email"
-                        name="email"
-                        placeholder="Email"
-                        onChange={handleChange}
-                        required
-                        className="au-input"
+                        placeholder={FORM_LABELS.EMAIL}
+                        aria-invalid={errors.email ? 'true' : undefined}
+                        className={`au-input ${errors.email ? 'input-error' : ''}`}
+                        {...field('email')}
                     />
-                    <input
-                        type="password"
-                        name="password"
-                        placeholder="Password"
-                        onChange={handleChange}
-                        required
-                        className="au-input"
+                    {errors.email && (
+                        <p className="au-live-feedback feedback-error">{errors.email.message}</p>
+                    )}
+
+                    <PasswordInput
+                        placeholder={FORM_LABELS.PASSWORD}
+                        autoComplete="current-password"
+                        error={errors.password?.message}
+                        aria-invalid={errors.password ? 'true' : undefined}
+                        {...field('password')}
                     />
-                    <button type="submit" className="au-btn">Login</button>
+
+                    <Button type="submit" variant="auth" isLoading={isSubmitting}>
+                        {PAGE_LABELS.LOGIN_CTA}
+                    </Button>
                 </form>
 
                 <p className="au-linktext">
-                    Don't have an account? <Link to="/register" className="au-link">Register here</Link>
+                    Don't have an account?{' '}
+                    <Link to={APP_ROUTES.REGISTER} className="au-link">Register here</Link>
                 </p>
-            </div>
+            </Card>
         </div>
     );
 };
