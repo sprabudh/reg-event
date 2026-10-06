@@ -36,7 +36,6 @@ function App() {
                     <Route path={APP_ROUTES.EVENT_DETAIL} element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
                     <Route path={APP_ROUTES.MY_TICKETS} element={<ProtectedRoute><MyTickets /></ProtectedRoute>} />
 
-                    {/* UPDATED: Both routes now use the shared EventForm component */}
                     <Route path={APP_ROUTES.CREATE_EVENT} element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
                     <Route path={APP_ROUTES.EDIT_EVENT} element={<ProtectedRoute><EventForm /></ProtectedRoute>} />
 

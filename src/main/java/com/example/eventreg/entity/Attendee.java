@@ -36,7 +36,7 @@ public class Attendee {
 
     @Pattern(regexp = "^\\d{10}$", message = "Mobile number must be exactly 10 digits")
     @Column(name = "mobile_number")
-    private String mobileNumber;
+        private String mobileNumber;
 
     @CreationTimestamp
     @Column(name = "registration_date", updatable = false)

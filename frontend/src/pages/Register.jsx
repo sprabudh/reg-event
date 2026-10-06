@@ -17,7 +17,7 @@ import {
 const Register = () => {
     const { field, errors, isSubmitting, apiError, matchState, onSubmit } = useAuthForm({
         schema: registerSchema,
-        submit: registerUser,
+        submit: registerUser,//Api function to call
         errorMessage: ERROR_MESSAGES.REGISTRATION_FAILED,
         buildPayload: ({ name, email, password }) => ({ name, email, password }),
         defaultValues: { name: '', email: '', password: '', confirmPassword: '' }
@@ -29,9 +29,8 @@ const Register = () => {
                 <h1 className="au-brand">{PAGE_LABELS.BRAND}</h1>
                 <h2 className="au-sub">{PAGE_LABELS.REGISTER_SUBTITLE}</h2>
 
-                {/* Top banner is for server-side failures only (e.g. email
-                    already exists). Field problems render under their field. */}
-                {apiError && <div className="au -error">{apiError}</div>}
+
+                {apiError && <div className="au-error">{apiError}</div>}
 
                 <form onSubmit={onSubmit} className="au-form" noValidate>
                     <Input

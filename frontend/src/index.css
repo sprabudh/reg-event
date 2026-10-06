@@ -291,14 +291,32 @@ input.ef-input, select.ef-input { padding: 12px 15px; border-radius: 8px; border
 .ef-check-label { font-size: 14px; font-weight: 500; cursor: pointer; }
 
 /* ===== Navbar (nb-) ===== */
-.nb-nav { padding: 15px 30px; background-color: #282c34; color: white; display: flex; justify-content: space-between; align-items: center; }
-.nb-left { display: flex; align-items: center; }
-.nb-brand { margin: 0 30px 0 0; color: #FFFFFF; }
-.nb-link { color: #61dafb; text-decoration: none; font-size: 18px; }
-.nb-spaced { margin-right: 20px; }
-.nb-right { display: flex; align-items: center; gap: 20px; }
-.nb-greet { font-size: 16px; color: #e0e0e0; font-weight: 500; }
-.nb-logout { padding: 8px 15px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.nb-nav { padding: 12px 30px; background-color: #282c34; color: white; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.nb-left { display: flex; align-items: center; gap: 22px; }
+.nb-brand { margin: 0; color: #FFFFFF; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.nb-links { display: flex; align-items: center; gap: 4px; }
+
+/* Nav items are padded pills rather than bare text, so the hover tint and
+   the active underline have room to read as deliberate states. */
+.nb-link { color: #cbd5e1; text-decoration: none; font-size: 15px; font-weight: 500; padding: 8px 14px; border-radius: 8px; position: relative; white-space: nowrap; transition: background-color 0.18s ease, color 0.18s ease; }
+.nb-link:hover { background-color: rgba(255, 255, 255, 0.08); color: #ffffff; }
+.nb-link:focus-visible { outline: 2px solid #61dafb; outline-offset: 2px; }
+
+/* Current page: tinted pill plus an accent underline, so the active item is
+   obvious against the dark bar. NavLink adds the `active` class and also sets
+   aria-current="page", so the styling holds even without the class hook. */
+.nb-link.active,
+.nb-link[aria-current="page"] { background-color: rgba(97, 218, 251, 0.14); color: #ffffff; font-weight: 600; }
+.nb-link.active::after,
+.nb-link[aria-current="page"]::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px; height: 2px; border-radius: 2px; background-color: #61dafb; }
+
+.nb-right { display: flex; align-items: center; gap: 16px; }
+.nb-greet { font-size: 15px; color: #e0e0e0; font-weight: 500; }
+.nb-logout { padding: 8px 15px; background-color: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background-color 0.18s ease; }
+.nb-logout:hover { background-color: #b91c1c; }
+.nb-logout:focus-visible { outline: 2px solid #fca5a5; outline-offset: 2px; }
+
+@media (max-width: 640px) { .nb-nav { padding: 10px 16px; } .nb-greet { display: none; } }
 
 /* ===== EditAttendee (ea-) ===== */
 .ea-wrap { max-width: 500px; margin: 0 auto; }

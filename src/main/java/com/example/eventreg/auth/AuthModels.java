@@ -1,5 +1,6 @@
 package com.example.eventreg.auth;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -45,13 +46,42 @@ public class AuthModels {
         private String password;
     }
 
+    /**
+     * The identity behind the token. Kept as its own object so the client
+     * receives { "token": "eyJ...", "user": { "role": ..., "name": ... } }
+     * rather than three sibling keys -- role and name describe the user, the
+     * token is the credential.
+     */
     @Data
     @Builder
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class AuthenticationResponse {
-        private String token;
+    @JsonPropertyOrder({ "role", "name" })
+    public static class UserInfo {
         private String role;
         private String name;
+    }
+
+    /**
+     * Auth responses from /register, /register-admin and /authenticate.
+     *
+     * Serializes as:
+     *   {  { "role": ..., "name": ... }, "token": "eyJ..." }
+     *
+     * @JsonPropertyOrder pins the key order. Jackson's default depends on
+     * getter-introspection order, which is not something the client should
+     * ever have to care about -- declare it so the wire format is stable.
+     *
+     * token stays a plain String on purpose: it is sent verbatim as
+     * `Authorization: Bearer <token>`, so it must remain a scalar.
+     */
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @JsonPropertyOrder({ "user", "token" })
+    public static class AuthenticationResponse {
+        private UserInfo user;
+        private String token;
     }
 }

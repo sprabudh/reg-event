@@ -36,14 +36,8 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(role)
                 .build();
-        repository.save(user);
-        var jwtToken = jwtService.generateToken(user);
-
-        return AuthModels.AuthenticationResponse.builder()
-                .token(jwtToken)
-                .role(user.getRole().name()) // Send the role to React!
-                .name(user.getName())        // <--- ADDED THIS: Send the name to React!
-                .build();
+        var saved = repository.save(user);
+        return toResponse(saved);
     }
 
     public AuthModels.AuthenticationResponse authenticate(AuthModels.AuthenticationRequest request) {
@@ -51,12 +45,22 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
         var user = repository.findByEmail(request.getEmail()).orElseThrow();
-        var jwtToken = jwtService.generateToken(user);
+        return toResponse(user);
+    }
 
+    /**
+     * Mints the JWT and pairs it with the caller's identity.
+     *
+     * Shared by all three auth entry points (register, register-admin,
+     * authenticate) so the response shape is defined in exactly one place.
+     */
+    private AuthModels.AuthenticationResponse toResponse(User user) {
         return AuthModels.AuthenticationResponse.builder()
-                .token(jwtToken)
-                .role(user.getRole().name()) // Send the role to React!
-                .name(user.getName())        // <--- ADDED THIS: Send the name to React!
+                .user(AuthModels.UserInfo.builder()
+                        .role(user.getRole().name())
+                        .name(user.getName())
+                        .build())
+                .token(jwtService.generateToken(user))
                 .build();
     }
 }
