@@ -1,5 +1,6 @@
 package com.example.eventreg.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -38,6 +39,35 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotYourRegistrationException.class)
     public ResponseEntity<Map<String, Object>> handleNotYourRegistrationException(NotYourRegistrationException ex) {
         return buildErrorResponse(ex.getMessage(), HttpStatus.FORBIDDEN);
+    }
+
+    // 3c-2. Host touched a resource they do not own.
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<Map<String, Object>> handleForbiddenOperation(ForbiddenOperationException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.FORBIDDEN);
+    }
+
+    // 3c-3. Account exists but is the wrong kind of account for this action
+    // (e.g. picking "Host" at login for an attendee account).
+    @ExceptionHandler(AccountTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountTypeMismatch(AccountTypeMismatchException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
+    // 3c-4. Duplicate email on register. Without this it surfaces as a 500
+    // from the unique constraint, and the client shows a generic failure.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        return buildErrorResponse("That email is already registered. Try signing in instead.",
+                HttpStatus.CONFLICT);
+    }
+
+    // 3c-5. Bad input we reject ourselves (blank category name, duplicate
+    // pending category request, ...). These are caller errors, not server
+    // faults -- without this they hit the catch-all below and report 500.
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
     // 3c. Wrong email/password from the authentication manager. Without this

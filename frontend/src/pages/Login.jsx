@@ -8,6 +8,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import {
     APP_ROUTES,
+    ACCOUNT_TYPES,
     ERROR_MESSAGES,
     FORM_LABELS,
     PAGE_LABELS
@@ -21,7 +22,8 @@ const Login = () => {
         // Login shows no inline errors until you hit submit, matching the
         // original behaviour.
         mode: 'onSubmit',
-        defaultValues: { email: '', password: '' }
+        buildPayload: ({ email, password, accountType }) => ({ email, password, accountType }),
+        defaultValues: { email: '', password: '', accountType: ACCOUNT_TYPES.ATTENDEE }
     });
 
     return (
@@ -33,6 +35,28 @@ const Login = () => {
                 {apiError && <div className="au-error">{apiError}</div>}
 
                 <form onSubmit={onSubmit} className="au-form" noValidate>
+                    {/* Which door you're coming through. The backend rejects a
+                        mismatch, so a host cannot sign in as an attendee or the
+                        reverse. Admin is exempt and may use either. */}
+                    <div className="au-type-row">
+                        <label className="au-type-option">
+                            <input
+                                type="radio"
+                                value={ACCOUNT_TYPES.ATTENDEE}
+                                {...field('accountType')}
+                            />
+                            <span>Attendee</span>
+                        </label>
+                        <label className="au-type-option">
+                            <input
+                                type="radio"
+                                value={ACCOUNT_TYPES.HOST}
+                                {...field('accountType')}
+                            />
+                            <span>Host</span>
+                        </label>
+                    </div>
+
                     <Input
                         type="email"
                         placeholder={FORM_LABELS.EMAIL}

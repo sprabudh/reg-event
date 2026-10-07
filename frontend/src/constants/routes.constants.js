@@ -16,7 +16,17 @@ export const APP_ROUTES = {
     CREATE_EVENT: '/create-event',
     EDIT_EVENT: '/edit-event/:id',
     EDIT_ATTENDEE: '/edit-attendee/:id',
-    ADMIN_SETUP: '/admin-setup'
+    ADMIN_SETUP: '/admin-setup',
+    FORBIDDEN: '/forbidden',
+
+    // Host role
+    HOST_EVENTS: '/host/events',
+    HOST_EVENT_DETAIL: '/host/events/:id',
+    HOST_NEW_EVENT: '/host/events/new',
+    HOST_EDIT_EVENT: '/host/events/:id/edit',
+
+    // Admin approval queue
+    ADMIN_APPROVALS: '/admin/approvals'
 };
 
 /** Builders for the parameterized routes above. */

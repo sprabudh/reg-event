@@ -42,6 +42,17 @@ public class SecurityConfig {
                         // Normal login and user registration are public
                         .requestMatchers("/api/auth/authenticate", "/api/auth/register").permitAll()
 
+                        // --- Host role ---
+                        // Authorities are unprefixed (User.getAuthorities uses
+                        // role.name()), so this is hasAuthority("HOST"), not
+                        // hasRole("HOST") -- the latter would look for a
+                        // "ROLE_HOST" authority and match nothing.
+                        // Placed above anyRequest() so it wins.
+                        .requestMatchers("/api/host/**").hasAuthority("HOST")
+
+                        // --- Admin approval queue (new /api/admin/** namespace) ---
+                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+
                         // --- VULNERABILITY FIXED ---
                         // Only an EXISTING Admin can create a new Admin!
                         .requestMatchers("/api/auth/register-admin").hasAuthority("ADMIN")

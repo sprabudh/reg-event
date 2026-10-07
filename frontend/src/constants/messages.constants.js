@@ -1,5 +1,5 @@
 /**
- * All user-facing copy: window.confirm prompts, catch-block errors, and
+ * All user-facing copy: confirm-dialog prompts, catch-block errors, and
  * success toasts. Keeps wording consistent and editable in one place.
  */
 
@@ -11,6 +11,22 @@ export const PROMPTS = {
     CANCEL_REGISTRATION: 'Cancel your registration?',
     /** Takes the event name so the prompt names what is being cancelled. */
     cancelRegistrationFor: (eventName) => `Cancel your registration for "${eventName || 'this event'}"?`
+};
+
+/**
+ * Button text for ConfirmDialog. Separate from PROMPTS because those are
+ * written as questions ("Remove this attendee?") and read wrong on a button.
+ * Pages pass the specific label so the action is named, not generic.
+ */
+export const CONFIRM_LABELS = {
+    DEFAULT_TITLE: 'Are you sure?',
+    CANCEL: 'Cancel',
+    CONFIRM: 'Confirm',
+    LOGOUT: 'Logout',
+    DELETE_EVENT: 'Delete Event',
+    DELETE_CATEGORY: 'Delete Category',
+    CANCEL_REGISTRATION: 'Cancel Registration',
+    REMOVE_ATTENDEE: 'Remove Attendee'
 };
 
 export const ERROR_MESSAGES = {
@@ -43,4 +59,22 @@ export const SUCCESS_MESSAGES = {
     CANCEL_REGISTRATION_OK: 'Registration cancelled successfully.',
     REGISTRATION_REMOVED: 'Registration removed successfully.',
     CHECK_IN_OK: (name) => `${name} has been successfully checked in!`
+};
+
+/**
+ * Copy for the 403 page. Kept here with the rest of the user-facing strings so
+ * the wording is editable in one place.
+ */
+export const ACCESS_DENIED_LABELS = {
+    CODE: '403',
+    TITLE: 'Access Denied',
+    MESSAGE: 'This page is restricted to administrators. Your account does not have the required permissions to view it.',
+    CONTACT: 'If you believe you should have access, please contact an administrator.',
+    SIGNED_IN_AS: 'Signed in as',
+    CURRENT_ROLE: 'Your role',
+    REQUIRES_ROLE: 'Requires role',
+    PAGE: 'Page',
+    NO_ROLE: 'No role assigned',
+    BACK_HOME: 'Back to Dashboard',
+    BROWSE_EVENTS: 'Browse Events'
 };

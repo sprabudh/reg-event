@@ -37,8 +37,10 @@ public class EventController {
 
         boolean isAdmin = isAdmin();
 
-        // Admins see every event (including ended ones); users only see upcoming events
-        Page<Event> events = eventService.getAllEvents(name, categoryId, PageRequest.of(page, size), isAdmin);
+        // Pass `false` for includeUnapproved so PENDING/REJECTED events are NEVER
+        // shown on the Dashboard or Events catalog before Admin approval.
+        Page<Event> events = eventService.getAllEvents(
+                name, categoryId, PageRequest.of(page, size), isAdmin, false);
         return ResponseEntity.ok(events);
     }
 

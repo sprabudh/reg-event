@@ -1,15 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { createEvent, getEventById, updateEvent } from '../services/eventService';
+import { submitEvent, updateMyEvent, getMyEventById } from '../services/hostService';
+import { getUserRole } from '../services/authService';
 import { getCategories } from '../services/categoryService';
 import Field from '../components/ui/Field';
-import { APP_ROUTES, ERROR_MESSAGES } from '../constants';
+import { APP_ROUTES, ERROR_MESSAGES, ROLES } from '../constants';
 import { getErrorMessage } from '../utils/errors';
 
 const EventForm = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
+
+    // Same form for admins and hosts. A host's copy is persisted under
+    // /api/host/** and lands as PENDING instead of publishing immediately --
+    // that difference lives entirely in the service call below.
+    const isHost = getUserRole() === ROLES.HOST;
+    const backPath = isHost ? APP_ROUTES.HOST_EVENTS : APP_ROUTES.EVENTS;
 
     const [formData, setFormData] = useState({
         name: '',
@@ -32,7 +40,11 @@ const EventForm = () => {
             .catch(() => console.error('Failed to load categories'));
 
         if (isEditMode) {
-            getEventById(id)
+            // A host must read through their own endpoint, otherwise they'd be
+            // shown an event the backend will refuse to let them save.
+            const load = isHost ? getMyEventById(id) : getEventById(id);
+
+            load
                 .then((res) => {
                     const event = res.data;
                     setFormData({
@@ -50,7 +62,7 @@ const EventForm = () => {
                 })
                 .catch(() => setError(ERROR_MESSAGES.LOAD_EVENT_DETAILS_FAILED));
         }
-    }, [id, isEditMode]);
+    }, [id, isEditMode, isHost]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -67,10 +79,12 @@ const EventForm = () => {
         e.preventDefault();
         const payload = { ...formData, price: formData.price === '' ? 0 : formData.price };
 
-        const apiCall = isEditMode ? updateEvent(id, payload) : createEvent(payload);
+        const apiCall = isHost
+            ? (isEditMode ? updateMyEvent(id, payload) : submitEvent(payload))
+            : (isEditMode ? updateEvent(id, payload) : createEvent(payload));
 
         apiCall
-            .then(() => navigate(APP_ROUTES.EVENTS))
+            .then(() => navigate(backPath))
             .catch((err) => setError(getErrorMessage(err, ERROR_MESSAGES.SAVE_EVENT_FAILED(isEditMode ? 'update' : 'create'))));
     };
 
@@ -78,9 +92,19 @@ const EventForm = () => {
         <div className="ef-wrap">
             <div className="ef-card">
                 <div className="ef-header">
-                    <Link to={APP_ROUTES.EVENTS} className="ef-back">← Back to Events</Link>
-                    <h2 className="ef-title">{isEditMode ? 'Edit Event' : 'Create New Event'}</h2>
+                    <Link to={backPath} className="ef-back">&larr; Back</Link>
+                    <h2 className="ef-title">
+                        {isEditMode ? 'Edit Event' : isHost ? 'Request New Event' : 'Create New Event'}
+                    </h2>
                 </div>
+
+                {/* Approval is the publish step, so a host needs to know their
+                    submission is not live yet. Admin sees nothing here. */}
+                {isHost && !isEditMode && (
+                    <div className="alert-success">
+                        Submitted events are reviewed by an admin before they appear in the catalog.
+                    </div>
+                )}
 
                 {error && <div className="ef-error">{error}</div>}
 
@@ -123,7 +147,9 @@ const EventForm = () => {
                         <Field label="Location" name="location" value={formData.location} onChange={handleChange} placeholder="e.g., Convention Center, Hall A" />
                     )}
 
-                    <button type="submit" className="ef-btn">{isEditMode ? 'Save Changes' : 'Create Event'}</button>
+                    <button type="submit" className="ef-btn">
+                        {isEditMode ? 'Save Changes' : isHost ? 'Submit for Approval' : 'Create Event'}
+                    </button>
                 </form>
             </div>
         </div>

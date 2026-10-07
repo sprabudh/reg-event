@@ -10,6 +10,7 @@ import com.example.eventreg.exception.DuplicateRegistrationException;
 import com.example.eventreg.exception.NotYourRegistrationException;
 import com.example.eventreg.repository.AttendeeRepository;
 import com.example.eventreg.repository.PaymentRepository;
+import com.example.eventreg.user.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -196,41 +197,73 @@ public class AttendeeService {
     }
 
     @Transactional
-    public Attendee updateAttendee(Long id, Attendee attendeeDetails, boolean isAdmin, String principalEmail) {
+    public Attendee updateAttendee(Long id, Attendee attendeeDetails, Role callerRole, String principalEmail, Long principalUserId) {
         Attendee attendee = getAttendeeById(id);
 
-        // Non-admins may only touch their own registration. Ownership is the
-        // email, matching how getMyTickets/getMyRegistrations already link
-        // registrations to an account.
-        if (!isAdmin) {
-            if (principalEmail == null || !principalEmail.equals(attendee.getEmail())) {
+        Long eventHostId = attendee.getEvent() == null ? null : attendee.getEvent().getHostedByUserId();
+        boolean isEventHost = (callerRole == Role.HOST && principalUserId != null && principalUserId.equals(eventHostId));
+        boolean hasManagerAccess = (callerRole == Role.ADMIN) || isEventHost;
+
+        // If the caller is neither the Admin nor the Host who owns this event,
+        // they are acting as a normal attendee editing their own registration.
+        if (!hasManagerAccess) {
+            if (principalEmail == null || !principalEmail.equalsIgnoreCase(attendee.getEmail())) {
                 throw new NotYourRegistrationException("You can only edit your own registration.");
             }
             if (attendee.getStatus() == RegistrationStatus.CHECKED_IN) {
                 throw new NotYourRegistrationException("You cannot edit your details after check-in.");
             }
-            // Changing the email would detach the registration from the account,
-            // so only an admin can do that.
-            if (attendeeDetails.getEmail() != null && !attendeeDetails.getEmail().equals(attendee.getEmail())) {
-                throw new NotYourRegistrationException("Only an admin can change the email on a registration.");
+            if (attendeeDetails.getEmail() != null && !attendeeDetails.getEmail().equalsIgnoreCase(attendee.getEmail())) {
+                throw new NotYourRegistrationException("Only an admin or the event host can change the email on a registration.");
             }
         }
 
-        if (!attendee.getEmail().equals(attendeeDetails.getEmail())) {
+        if (!attendee.getEmail().equalsIgnoreCase(attendeeDetails.getEmail())) {
             if (attendeeRepository.existsByEmailAndEventId(attendeeDetails.getEmail(), attendee.getEvent().getId())) {
                 throw new DuplicateRegistrationException("Update failed: Email is already registered for this event");
             }
         }
         attendee.setName(attendeeDetails.getName());
         attendee.setEmail(attendeeDetails.getEmail());
-        // Previously never persisted -- the field was accepted and then dropped.
         attendee.setMobileNumber(attendeeDetails.getMobileNumber());
         return attendeeRepository.save(attendee);
     }
 
+    /**
+     * Cancels/removes a registration, enforcing who is allowed to do it.
+     *
+     *   ADMIN -- anything.
+     *   USER  -- only their own registration (matched on email, the same way
+     *            getMyTickets/getMyRegistrations link a ticket to an account).
+     *   HOST  -- only registrations on events they own. Without this a host
+     *            could cancel a stranger's seat just by knowing the id.
+     *
+     * The check runs BEFORE any mutation, because deletion triggers refund
+     * recording and waitlist promotion -- side effects that must not happen for
+     * a rejected request.
+     */
     @Transactional
-    public void deleteAttendee(Long id) {
+    public void deleteAttendee(Long id, Role callerRole, String principalEmail, Long principalUserId) {
         Attendee attendeeToDelete = getAttendeeById(id);
+
+        if (callerRole != Role.ADMIN) {
+            Long hostId = attendeeToDelete.getEvent() == null
+                    ? null
+                    : attendeeToDelete.getEvent().getHostedByUserId();
+            boolean isEventHost = callerRole == Role.HOST
+                    && principalUserId != null
+                    && principalUserId.equals(hostId);
+            boolean isOwnRegistration = principalEmail != null
+                    && principalEmail.equalsIgnoreCase(attendeeToDelete.getEmail());
+
+            if (!isEventHost && !isOwnRegistration) {
+                throw new NotYourRegistrationException(
+                        callerRole == Role.HOST
+                                ? "You can only cancel your own registration or manage registrations on events you host."
+                                : "You can only cancel your own registration.");
+            }
+        }
+
         Long eventId = attendeeToDelete.getEvent().getId();
         RegistrationStatus oldStatus = attendeeToDelete.getStatus();
 

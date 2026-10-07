@@ -19,6 +19,9 @@ public class AttendeeController {
     @Autowired
     private AttendeeService attendeeService;
 
+    @Autowired
+    private com.example.eventreg.user.UserRepository userRepository;
+
     @PostMapping("/events/{eventId}/attendees")
     public ResponseEntity<Attendee> registerAttendee(@PathVariable Long eventId, @Valid @RequestBody Attendee attendee) {
         Attendee registeredAttendee = attendeeService.registerAttendee(eventId, attendee);
@@ -78,9 +81,10 @@ public class AttendeeController {
 
     @PutMapping("/attendees/{id}")
     public ResponseEntity<Attendee> updateAttendee(@PathVariable Long id,
-                                                  @Valid @RequestBody Attendee attendeeDetails,
-                                                  java.security.Principal principal) {
-        Attendee updatedAttendee = attendeeService.updateAttendee(id, attendeeDetails, isAdmin(), principalEmail(principal));
+                                                   @Valid @RequestBody Attendee attendeeDetails,
+                                                   java.security.Principal principal) {
+        Attendee updatedAttendee = attendeeService.updateAttendee(
+                id, attendeeDetails, callerRole(), principalEmail(principal), callerUserId(principal));
         return ResponseEntity.ok(updatedAttendee);
     }
 
@@ -97,9 +101,41 @@ public class AttendeeController {
         return principal == null ? null : principal.getName();
     }
 
+    /**
+     * The caller's role, read from the authorities the JWT filter populated.
+     * Falls back to ADMIN only when there is no authentication at all, which
+     * SecurityConfig's anyRequest().authenticated() prevents anyway.
+     */
+    private com.example.eventreg.user.Role callerRole() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null) return com.example.eventreg.user.Role.USER;
+        for (var authority : auth.getAuthorities()) {
+            String value = authority.getAuthority();
+            // Authorities are unprefixed, but tolerate both spellings.
+            if (value.equals("ADMIN") || value.equals("ROLE_ADMIN")) return com.example.eventreg.user.Role.ADMIN;
+            if (value.equals("HOST") || value.equals("ROLE_HOST")) return com.example.eventreg.user.Role.HOST;
+        }
+        return com.example.eventreg.user.Role.USER;
+    }
+
+    /**
+     * The caller's user row id, needed for host ownership checks. Principal
+     * gives us the email (User.getUsername() is the email), so resolve it.
+     */
+    private Long callerUserId(java.security.Principal principal) {
+        if (principal == null) return null;
+        return userRepository.findByEmail(principal.getName()).map(u -> u.getId()).orElse(null);
+    }
+
     @DeleteMapping("/attendees/{id}")
-    public ResponseEntity<Void> deleteAttendee(@PathVariable Long id) {
-        attendeeService.deleteAttendee(id);
+    public ResponseEntity<Void> deleteAttendee(@PathVariable Long id, java.security.Principal principal) {
+        // Who is allowed to cancel this specific registration is decided in the
+        // service: admin anything, user own only, host own-events only. Passing
+        // the caller's identity down keeps that rule in one place instead of
+        // being re-derived (and mis-derived) per endpoint.
+        attendeeService.deleteAttendee(
+                id, callerRole(), principalEmail(principal), callerUserId(principal));
         return ResponseEntity.noContent().build();
     }
 

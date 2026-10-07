@@ -18,7 +18,48 @@ export const ALL_STORAGE_KEYS = Object.values(STORAGE_KEYS);
 /** Mirrors com.example.eventreg.user.Role on the backend. */
 export const ROLES = {
     ADMIN: 'ADMIN',
-    USER: 'USER'
+    USER: 'USER',
+    HOST: 'HOST'
+};
+
+/**
+ * Which account type the Register page offers. Sent as `accountType` and
+ * mapped to a role server-side by AuthService.resolveRegisterRole.
+ * Kept distinct from ROLES because the wire value is a UI concept, not an
+ * authority string.
+ */
+export const ACCOUNT_TYPES = {
+    ATTENDEE: 'ATTENDEE',
+    HOST: 'HOST'
+};
+
+/**
+ * Host signups must use this domain. MUST stay in step with
+ * application.security.auth.host-email-domain on the backend, which enforces
+ * the same rule -- this copy only saves the user a round trip.
+ */
+export const HOST_EMAIL_SUFFIX = '@eventora.com';
+
+export const HOST_EMAIL_ERROR = 'Host accounts must use an @eventora.com email address.';
+
+/** Shown once the host email is acceptable, so the check feels live. */
+export const HOST_EMAIL_OK = 'Host email accepted.';
+
+/**
+ * Short human label for the signed-in role, shown in the header so the user
+ * can see which door they came through.
+ */
+export const ROLE_LABELS = {
+    [ROLES.ADMIN]: 'Admin',
+    [ROLES.HOST]: 'Host',
+    [ROLES.USER]: 'Attendee'
+};
+
+/** Badge class per role, reusing the existing pill palette. */
+export const ROLE_BADGE_CLASSES = {
+    [ROLES.ADMIN]: 'bd-indigo',
+    [ROLES.HOST]: 'bd-green',
+    [ROLES.USER]: 'bd-default'
 };
 
 /**

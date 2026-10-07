@@ -4,8 +4,10 @@ import { getEvents, deleteEvent } from '../services/eventService';
 import { getCategories } from '../services/categoryService';
 import { getUserRole } from '../services/authService';
 import { getMyRegistrations } from '../services/attendeeService';
+import { useConfirm } from '../hooks/useConfirm';
 import {
     APP_ROUTES,
+    CONFIRM_LABELS,
     ERROR_MESSAGES,
     PAGINATION,
     PROMPTS,
@@ -29,28 +31,30 @@ const EventsList = () => {
 
     const userRole = getUserRole();
     const isAdmin = userRole === ROLES.ADMIN;
+    const confirm = useConfirm();
 
     const loadEvents = () => {
-        // 3 full rows of 5 cards per page
         getEvents(currentPage, PAGINATION.EVENTS_PAGE_SIZE, searchTerm, selectedCategoryId)
             .then((response) => {
-                setEvents(response.data.content);
+                const approvedOnly = (response.data.content || []).filter(
+                    (e) => !e.approvalStatus || e.approvalStatus === 'APPROVED'
+                );
+                setEvents(approvedOnly);
                 setTotalPages(response.data.totalPages);
                 setErrorMessage('');
             })
             .catch((error) => console.error("Error fetching events:", error));
     };
 
-    // Fetch dynamic categories on mount
     useEffect(() => {
         getCategories()
             .then(res => setCategories(res.data))
             .catch(() => console.error("Failed to fetch categories"));
     }, []);
 
-    // Fetch the current user's registrations (eventId -> status) so cards can show the right action
+    // Both regular attendees (USER) and Hosts browsing the public catalog load their registrations
     useEffect(() => {
-        if (userRole === ROLES.USER) {
+        if (!isAdmin) {
             getMyRegistrations()
                 .then(res => {
                     const map = {};
@@ -61,21 +65,25 @@ const EventsList = () => {
                 })
                 .catch(() => console.error("Failed to fetch registrations"));
         }
-    }, [userRole]);
+    }, [isAdmin]);
 
-    // Reload events when page, search term, or selected category changes
     useEffect(() => {
         loadEvents();
     }, [currentPage, searchTerm, selectedCategoryId]);
 
-    const handleDelete = (id) => {
-        if (window.confirm(PROMPTS.DELETE_EVENT)) {
-            deleteEvent(id)
-                .then(() => loadEvents())
-                .catch((error) => {
-                    setErrorMessage(getErrorMessage(error, ERROR_MESSAGES.LOAD_EVENTS_FAILED));
-                });
-        }
+    const handleDelete = async (id) => {
+        const confirmed = await confirm({
+            message: PROMPTS.DELETE_EVENT,
+            confirmLabel: CONFIRM_LABELS.DELETE_EVENT,
+            tone: 'danger'
+        });
+        if (!confirmed) return;
+
+        deleteEvent(id)
+            .then(() => loadEvents())
+            .catch((error) => {
+                setErrorMessage(getErrorMessage(error, ERROR_MESSAGES.LOAD_EVENTS_FAILED));
+            });
     };
 
     return (
@@ -108,30 +116,28 @@ const EventsList = () => {
                     className="el-select"
                 >
                     <option value="">All Categories</option>
-                    {/* Dynamically map categories for the filter dropdown */}
                     {categories.map(cat => (
                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                 </select>
 
-                    {(searchTerm || selectedCategoryId) && (
-                        <button
-                            type="button"
-                            className="btn btn-secondary el-clear"
-                            onClick={() => {
-                                setSearchTerm('');
-                                setSelectedCategoryId('');
-                                setCurrentPage(PAGINATION.DEFAULT_PAGE);
-                            }}
-                        >
-                            Clear Filters
-                        </button>
-                    )}
+                {(searchTerm || selectedCategoryId) && (
+                    <button
+                        type="button"
+                        className="btn btn-secondary el-clear"
+                        onClick={() => {
+                            setSearchTerm('');
+                            setSelectedCategoryId('');
+                            setCurrentPage(PAGINATION.DEFAULT_PAGE);
+                        }}
+                    >
+                        Clear Filters
+                    </button>
+                )}
             </div>
 
             {errorMessage && <div className="el-error">⚠️ {errorMessage}</div>}
 
-            {/* Replaced Table with Responsive Card Grid Layout */}
             <div className="el-grid">
                 {events.length === 0 ? (
                     <div className="el-empty">
@@ -158,45 +164,47 @@ const EventsList = () => {
                         }
 
                         return (
-                        <div key={event.id} className="el-card">
-                            <h3 className="el-title">
-                                {event.name}
-                                {event.expired && (
-                                    <span className="el-ended">Ended</span>
-                                )}
-                            </h3>
+                            <div key={event.id} className="el-card">
+                                <h3 className="el-title">
+                                    {event.name}
+                                    {event.expired && (
+                                        <span className="el-ended">Ended</span>
+                                    )}
+                                </h3>
 
-                            <div className="el-details">
-                                <p className="el-row">
-                                    <strong>Date:</strong> <span>{event.date}</span>
-                                </p>
-                                <p className="el-row">
-                                    <strong>Category:</strong> <span>{event.category ? event.category.name : 'N/A'}</span>
-                                </p>
-                                <p className="el-row">
-                                    <strong>Capacity:</strong> <span>{event.capacity} seats</span>
-                                </p>
+                                <div className="el-details">
+                                    <p className="el-row">
+                                        <strong>Hosted By:</strong> <span>{event.hostName || 'Admin'}</span>
+                                    </p>
+                                    <p className="el-row">
+                                        <strong>Date:</strong> <span>{event.date}</span>
+                                    </p>
+                                    <p className="el-row">
+                                        <strong>Category:</strong> <span>{event.category ? event.category.name : 'N/A'}</span>
+                                    </p>
+                                    <p className="el-row">
+                                        <strong>Capacity:</strong> <span>{event.capacity} seats</span>
+                                    </p>
+                                </div>
+
+                                <div className="el-actions">
+                                    <Link to={buildEventDetailPath(event.id)} className={`el-btn-act ${isWaitlistAction ? 'el-bg-waitlist' : 'el-bg-book'}`}>
+                                        {actionText}
+                                    </Link>
+
+                                    {isAdmin && (
+                                        <>
+                                            <Link to={buildEditEventPath(event.id)} className="el-btn-edit">Edit</Link>
+                                            <button onClick={() => handleDelete(event.id)} className="el-btn-del">Delete</button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-
-                            <div className="el-actions">
-                                <Link to={buildEventDetailPath(event.id)} className={`el-btn-act ${isWaitlistAction ? 'el-bg-waitlist' : 'el-bg-book'}`}>
-                                    {actionText}
-                                </Link>
-
-                                {isAdmin && (
-                                    <>
-                                        <Link to={buildEditEventPath(event.id)} className="el-btn-edit">Edit</Link>
-                                        <button onClick={() => handleDelete(event.id)} className="el-btn-del">Delete</button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
                         );
                     })
                 )}
             </div>
 
-            {/* Pagination remains the same */}
             {totalPages > 1 && (
                 <div className="el-pager">
                     <button className="btn btn-secondary" disabled={currentPage === 0} onClick={() => setCurrentPage(currentPage - 1)}>Previous</button>

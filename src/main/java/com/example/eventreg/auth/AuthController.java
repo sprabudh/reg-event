@@ -14,7 +14,9 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthModels.AuthenticationResponse> register(@Valid @RequestBody AuthModels.RegisterRequest request) {
-        return ResponseEntity.ok(service.register(request));
+        // Honours request.accountType when present (HOST), otherwise creates a
+        // normal attendee exactly as before.
+        return ResponseEntity.ok(service.registerWithAccountType(request));
     }
 
     @PostMapping("/register-admin")

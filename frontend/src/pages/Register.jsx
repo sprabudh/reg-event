@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useWatch } from 'react-hook-form';
 import { registerUser } from '../services/authService';
 import { registerSchema } from '../utils/validationSchemas';
 import useAuthForm from '../hooks/useAuthForm';
@@ -8,20 +9,46 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import {
     APP_ROUTES,
+    ACCOUNT_TYPES,
     ERROR_MESSAGES,
     FORM_LABELS,
+    HOST_EMAIL_ERROR,
+    HOST_EMAIL_OK,
+    HOST_EMAIL_SUFFIX,
     PASSWORD_EXAMPLE,
     PAGE_LABELS
 } from '../constants';
 
 const Register = () => {
-    const { field, errors, isSubmitting, apiError, matchState, onSubmit } = useAuthForm({
+    const { field, errors, isSubmitting, apiError, matchState, control, onSubmit } = useAuthForm({
         schema: registerSchema,
         submit: registerUser,//Api function to call
         errorMessage: ERROR_MESSAGES.REGISTRATION_FAILED,
-        buildPayload: ({ name, email, password }) => ({ name, email, password }),
-        defaultValues: { name: '', email: '', password: '', confirmPassword: '' }
+        buildPayload: ({ name, email, password, accountType }) => ({ name, email, password, accountType }),
+        defaultValues: {
+            name: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            accountType: ACCOUNT_TYPES.ATTENDEE
+        }
     });
+
+    // Live host-domain feedback. Watched rather than derived from `errors`,
+    // because RHF only re-runs validation on its own schedule (blur/submit),
+    // so an error-driven message would sit stale until the user left the field.
+    const accountType = useWatch({ control, name: 'accountType' });
+    const email = useWatch({ control, name: 'email' });
+
+    const isHost = accountType === ACCOUNT_TYPES.HOST;
+    const trimmedEmail = (email || '').trim();
+
+    // Don't nag before the user has typed anything, and treat an empty field
+    // as "not yet invalid" so we don't duplicate the required-field message.
+    const emailTyped = trimmedEmail.length > 0;
+    const hostEmailOk = trimmedEmail.toLowerCase().endsWith(HOST_EMAIL_SUFFIX);
+    const showHostEmailError = isHost && emailTyped && !hostEmailOk;
+    const showHostEmailOk = isHost && emailTyped && hostEmailOk;
 
     return (
         <div className="au-wrap">
@@ -33,6 +60,30 @@ const Register = () => {
                 {apiError && <div className="au-error">{apiError}</div>}
 
                 <form onSubmit={onSubmit} className="au-form" noValidate>
+                    {/* Account type. Uses the same .ef-checks-row pattern as
+                        EventForm so it matches the rest of the app. */}
+                    <div className="au-type-row">
+                        <label className="au-type-option">
+                            <input
+                                type="radio"
+                                value={ACCOUNT_TYPES.ATTENDEE}
+                                {...field('accountType')}
+                            />
+                            <span>Attendee </span>
+                        </label>
+                        <label className="au-type-option">
+                            <input
+                                type="radio"
+                                value={ACCOUNT_TYPES.HOST}
+                                {...field('accountType')}
+                            />
+                            <span>Host </span>
+                        </label>
+                    </div>
+                    {errors.accountType && (
+                        <p className="au-live-feedback feedback-error">{errors.accountType.message}</p>
+                    )}
+
                     <Input
                         type="text"
                         placeholder={FORM_LABELS.FULL_NAME}
@@ -53,6 +104,19 @@ const Register = () => {
                     />
                     {errors.email && (
                         <p className="au-live-feedback feedback-error">{errors.email.message}</p>
+                    )}
+                    {/* Only while Host is chosen, and only once it is actually
+                        wrong -- this used to render unconditionally inside an
+                        error-styled box, which read as a permanent failure. */}
+                    {showHostEmailError && (
+                        <p className="au-live-feedback feedback-error" role="alert">
+                            {HOST_EMAIL_ERROR}
+                        </p>
+                    )}
+                    {showHostEmailOk && (
+                        <p className="au-live-feedback au-host-email-ok" role="status">
+                            {HOST_EMAIL_OK}
+                        </p>
                     )}
 
                     <PasswordInput

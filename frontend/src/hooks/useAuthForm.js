@@ -20,6 +20,10 @@ import { APP_ROUTES } from '../constants';
  * @param mode         react-hook-form validation mode
  * @param buildPayload optional mapper applied before calling submit
  * @param defaultValues must list every field in the schema
+ *
+ * `control` is returned so a page can watch any extra field itself (Register
+ * uses it to show the host-domain hint only while Host is selected) without
+ * this hook having to know which fields exist.
  */
 const useAuthForm = ({
     schema,
@@ -73,7 +77,7 @@ const useAuthForm = ({
         }
     });
 
-    return { field, errors, isSubmitting, apiError, matchState, onSubmit };
+    return { field, errors, isSubmitting, apiError, matchState, control, onSubmit };
 };
 
 export default useAuthForm;

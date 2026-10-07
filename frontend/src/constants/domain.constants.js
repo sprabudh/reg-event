@@ -59,6 +59,8 @@ export const NAV_LABELS = {
     EVENTS: 'Events',
     MY_TICKETS: 'My Tickets',
     CATEGORIES: 'Categories',
+    MY_EVENTS: 'My Events',
+    APPROVALS: 'Approvals',
     LOGIN: 'Login',
     LOGOUT: 'Logout',
     GREETING: (name) => `Hi, ${name || 'User'}!`,

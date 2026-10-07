@@ -16,6 +16,13 @@ public class AuthModels {
     public static final String EMAIL_POLICY = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$";
     public static final String EMAIL_POLICY_MESSAGE = "Enter a valid Email ID";
 
+    /** accountType values the client may send on register/login. */
+    public static final String ACCOUNT_TYPE_ATTENDEE = "ATTENDEE";
+    public static final String ACCOUNT_TYPE_HOST = "HOST";
+
+    public static final String HOST_DOMAIN_MESSAGE =
+            "Host accounts must use an @eventora.com email address.";
+
     @Data
     @Builder
     @AllArgsConstructor
@@ -31,6 +38,12 @@ public class AuthModels {
         @NotBlank(message = "Password is required")
         @Pattern(regexp = PASSWORD_POLICY, message = PASSWORD_POLICY_MESSAGE)
         private String password;
+
+        /**
+         * Optional. Absent or ATTENDEE keeps the original behaviour exactly
+         * (Role.USER). HOST creates an event-manager account.
+         */
+        private String accountType;
     }
 
     @Data
@@ -44,6 +57,17 @@ public class AuthModels {
 
         @NotBlank(message = "Password is required")
         private String password;
+
+        /**
+         * Optional, and deliberately NOT sent by the current UI.
+         *
+         * When present the authenticated account's role must match, so
+         * "host email can't sign in as an attendee and vice versa" can be
+         * enforced. When absent the role is taken from the database as it
+         * always was -- which is what keeps ADMIN logins unaffected, since
+         * admins are neither hosts nor attendees.
+         */
+        private String accountType;
     }
 
     /**

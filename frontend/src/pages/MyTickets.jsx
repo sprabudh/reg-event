@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getMyTickets, deleteAttendee } from '../services/attendeeService';
+import { useConfirm } from '../hooks/useConfirm';
 import {
     APP_ROUTES,
+    CONFIRM_LABELS,
     DEFAULT_STATUS_BADGE_CLASS,
     ERROR_MESSAGES,
     PROMPTS,
@@ -18,6 +20,7 @@ const MyTickets = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const confirm = useConfirm();
 
     useEffect(() => {
         getMyTickets()
@@ -32,8 +35,14 @@ const MyTickets = () => {
         (a, b) => new Date((a.eventDate) || 0) - new Date((b.eventDate) || 0)
     );
 
-    const handleCancel = (ticket) => {
-        if (!window.confirm(PROMPTS.cancelRegistrationFor(ticket.eventName))) return;
+    const handleCancel = async (ticket) => {
+        const confirmed = await confirm({
+            message: PROMPTS.cancelRegistrationFor(ticket.eventName),
+            confirmLabel: CONFIRM_LABELS.CANCEL_REGISTRATION,
+            tone: 'danger'
+        });
+        if (!confirmed) return;
+
         deleteAttendee(ticket.id)
             .then(() => {
                 setTickets((prev) => prev.filter((t) => t.id !== ticket.id));

@@ -28,5 +28,33 @@ export const API_ENDPOINTS = {
         ME: '/attendees/me',
         MY_REGISTRATIONS: '/attendees/me/registrations',
         BY_ID: (id) => `/attendees/${id}`
+    },
+
+    /**
+     * Host role. Every path here sits under /api/host/**, which SecurityConfig
+     * restricts to hasAuthority("HOST") -- the UI never decides this.
+     *
+     * There is deliberately no category-request endpoint: categories are
+     * admin-owned, and a host picks the best fit (or "Other") from the same
+     * GET /api/categories list everyone uses.
+     */
+    HOST: {
+        EVENTS: '/host/events',
+        EVENT_BY_ID: (id) => `/host/events/${id}`,
+        MY_EVENTS: '/host/events',
+        ATTENDEES: (eventId) => `/host/events/${eventId}/attendees`,
+        PAYMENTS: (eventId) => `/host/events/${eventId}/payments`,
+        CHECK_IN: (eventId, ticketUuid) => `/host/events/${eventId}/checkin/${ticketUuid}`,
+        CANCEL_ATTENDEE: (attendeeId) => `/host/events/attendees/${attendeeId}`
+    },
+
+    /** Admin approval queue, under /api/admin/** (hasAuthority("ADMIN")). */
+    ADMIN: {
+        EVENT_APPROVALS: '/admin/approvals/events',
+        APPROVE_EVENT: (id) => `/admin/approvals/events/${id}/approve`,
+        REJECT_EVENT: (id) => `/admin/approvals/events/${id}/reject`,
+        COUNTS: '/admin/approvals/counts'
     }
+
+
 };
