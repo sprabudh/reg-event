@@ -236,31 +236,111 @@ button:hover, .btn:hover {
 .font-mono { font-family: monospace; }
 
 /* ===== MyTickets (mt-) ===== */
-.mt-wrap { max-width: 900px; margin: 0 auto; padding: 20px; }
+.mt-wrap {
+    max-width: 1600px; /* Optimal width for 3 columns */
+    margin: 0 auto;
+    padding: 20px;
+}
 .mt-title { color: #111827; margin: 0 0 4px 0; }
 .mt-subtitle { color: #6b7280; margin: 0 0 24px 0; }
+
 .mt-empty { text-align: center; padding: 60px 20px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; }
 .mt-empty-text { color: #6b7280; font-size: 16px; margin: 0 0 16px 0; }
 .mt-empty-link { color: #4f46e5; text-decoration: none; font-weight: 600; font-size: 15px; }
-.mt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
-.mt-card { background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+.mt-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 equal columns */
+    gap: 48px;
+    align-items: stretch; /* FIX: Forces all cards in a row to be the exact same height */
+    width: 100%;
+}
+
+/* Responsive fallbacks */
+@media (max-width: 1100px) {
+    .mt-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 768px) {
+    .mt-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.mt-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;          /* FIX: Enables internal flexbox for the card */
+    flex-direction: column; /* FIX: Stacks header, body, and footer vertically */
+    height: 95%;           /* FIX: Tells the card to fill the stretched grid cell */
+}
+
 .mt-ticket-header { background-color: #4f46e5; color: white; padding: 18px 20px; }
 .mt-header-brand { margin: 0 0 4px 0; font-size: 11px; letter-spacing: 0.08em; opacity: 0.85; }
-.mt-header-title { margin: 0; font-size: 20px; color: #ffffff; }
+.mt-header-title { margin: 0; font-size: 20px; color: #ffffff; word-wrap: break-word; } /* FIX: Prevents long titles from breaking layout */
 .mt-header-sub { margin: 4px 0 0 0; font-size: 13px; opacity: 0.9; }
-.mt-body { display: flex; gap: 20px; padding: 20px; align-items: flex-start; }
+
+.mt-body {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    align-items: flex-start;
+    flex-grow: 1; /* FIX: Forces the body to expand, pushing the footer neatly to the bottom */
+}
+
 .mt-qr-wrap { flex-shrink: 0; text-align: center; }
-.mt-qr-img { width: 140px; height: 140px; border: 1px solid #e2e8f0; border-radius: 8px; }
-.mt-qr-none { width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px; border: 1px dashed #cbd5e1; border-radius: 8px; }
-.mt-info { flex: 1; font-size: 14px; color: #334155; }
-.mt-row { margin: 6px 0; }
+.mt-qr-img { width: 120px; height: 120px; border: 1px solid #e2e8f0; border-radius: 8px; } /* Shrunk slightly to give text more room */
+.mt-qr-none { width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center; }
+
+.mt-info {
+    flex: 1;
+    font-size: 14px;
+    color: #334155;
+    min-width: 0; /* CRITICAL FIX: Stops long text from blowing out the flex container and overlapping other cards */
+}
+
+.mt-row { margin: 6px 0; word-wrap: break-word; overflow-wrap: break-word; } /* FIX: Forces long emails/locations to wrap */
+
 .mt-paid { color: #16a34a; background-color: #dcfce3; font-weight: 600; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 4px; }
 .mt-status { margin-left: 6px; padding: 3px 10px; }
-.mt-ticket-id { margin: 6px 0; font-family: monospace; background-color: #f1f5f9; padding: 6px 10px; border-radius: 6px; font-size: 12px; word-break: break-all; }
-.mt-footer { border-top: 1px dashed #cbd5e1; padding: 14px 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-.mt-btn-print { padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
-.mt-btn-cancel { padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
-.mt-btn-view { padding: 8px 14px; text-decoration: none; font-size: 13px; }
+
+.mt-ticket-id {
+    margin: 6px 0;
+    font-family: monospace;
+    background-color: #f1f5f9;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.mt-footer {
+    border-top: 1px dashed #cbd5e1;
+    padding: 10px 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    background-color: #f8fafc;
+}
+
+.mt-btn-print, .mt-btn-cancel, .mt-btn-view {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    text-align: center;
+}
+
+.mt-btn-print { background-color: #4f46e5; color: white; }
+.mt-btn-cancel { background-color: #ef4444; color: white; }
+.mt-btn-view { background-color: #64748b; color: white; text-decoration: none; display: inline-block; }
+
 
 /* ===== EventsList (el-) ===== */
 .el-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -284,7 +364,15 @@ input.el-search { max-width: 300px; padding: 8px; border-radius: 4px; border: 1p
 .el-bg-waitlist { background-color: #d97706; }
 .el-btn-edit { padding: 10px 16px; background-color: #6b7280; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 14px; text-align: center; }
 .el-btn-del { padding: 10px 16px; background-color: #dc2626; color: white; border: none; border-radius: 6px; font-weight: 500; font-size: 14px; cursor: pointer; }
-.el-pager { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 30px; }
+/* Update the pager to sit cleanly above the footer */
+.el-pager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    padding: 5px 0 0px 0; /* Space above and below the buttons */
+    margin-top: auto; /* Pushes the pager to the bottom if there are only a few cards */
+}
 .el-page-txt { font-size: 14px; font-weight: 500; }
 
 /* ===== Dashboard (dl-) ===== */
@@ -336,7 +424,20 @@ select.ef-input { padding-right: 34px; }
 .ef-check-label { font-size: 14px; font-weight: 500; cursor: pointer; }
 
 /* ===== Navbar (nb-) ===== */
-.nb-nav { padding: 12px 30px; background-color: #282c34; color: white; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.nb-nav {
+    padding: 12px 30px;
+    background-color: #282c34;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+}
 .nb-left { display: flex; align-items: center; gap: 22px; }
 .nb-brand { margin: 0; color: #FFFFFF; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
 .nb-links { display: flex; align-items: center; gap: 4px; }
@@ -366,16 +467,111 @@ select.ef-input { padding-right: 34px; }
 
 @media (max-width: 640px) { .nb-nav { padding: 10px 16px; } .nb-greet { display: none; } }
 
-/* ===== EditAttendee (ea-) ===== */
-.ea-wrap { max-width: 500px; margin: 0 auto; }
-.ea-back { cursor: pointer; color: #64748B; font-weight: 500; display: inline-block; margin-bottom: 20px; }
-.ea-title { margin-top: 0; margin-bottom: 20px; }
-.ea-form { display: flex; flex-direction: column; gap: 15px; }
-.ea-label { font-size: 12px; font-weight: bold; color: #64748B; display: block; margin-bottom: 5px; }
-input.ea-input { width: 100%; box-sizing: border-box; }
-.ea-submit { margin-top: 10px; }
-.ea-input-locked { background-color: #e2e8f0; color: #64748b; cursor: not-allowed; }
-.ea-hint { margin: 5px 0 0; font-size: 12px; color: #64748b; }
+/* ===== Edit Attendee (ea-) ===== */
+/* NOTE: .app-shell is a column flex container, so `margin: auto` alone would
+   kill cross-axis stretch and shrink-wrap this wrapper to fit-content.
+   An explicit `width: 100%` makes the width definite so max-width caps it
+   and the auto margins purely centre it. */
+.ea-wrap {
+    width: 70%;
+    max-width: 720px;
+    box-sizing: border-box;
+    margin: 24px auto 72px;
+    padding: 0 24px;
+}
+
+.ea-back {
+    cursor: pointer;
+    color: #4f46e5;
+    font-weight: 500;
+    display: inline-block;
+    margin-bottom: 20px;
+}
+.ea-back:hover { text-decoration: underline; }
+
+.ea-card {
+    padding: 40px 44px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 12px 32px -14px rgba(15, 23, 42, 0.18);
+}
+
+.ea-title {
+    margin: 0 0 28px;
+    font-size: 26px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.ea-form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.ea-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    display: block;
+    margin-bottom: 8px;
+}
+
+/* Universally targets all inputs inside the form, including the <Field> components */
+.ea-form input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ea-form input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.ea-input-locked {
+    background-color: #f1f5f9;
+    color: #94a3b8 !important;
+    cursor: not-allowed;
+    border-color: #e2e8f0 !important;
+}
+
+.ea-submit {
+    margin-top: 8px;
+    width: 100%;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 600;
+    background-color: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.ea-submit:hover {
+    background-color: #4338ca;
+}
+
+.ea-hint {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: #64748b;
+}
+
+@media (max-width: 600px) {
+    .ea-card { padding: 26px 20px; }
+    .ea-title { font-size: 22px; }
+    .ea-form { gap: 20px; }
+    .ea-wrap { padding: 0 16px; }
+}
 
 /* ===== ManageCategories (mc-) ===== */
 .mc-wrap { padding: 20px; max-width: 600px; margin: 0 auto; }
@@ -398,16 +594,15 @@ input.mc-input { padding: 8px; flex: 1; }
 .fd-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
 /* ===== App Shell ===== */
-/* Sticky footer. #root becomes a full-height flex column and .app-shell takes
-   all the leftover space, which pushes the footer to the bottom of the
-   viewport on short pages (Login, Events) instead of letting it sit directly
-   under the content and float mid-screen with dead space beneath it.
-   min-height rather than height, so tall pages (long ticket lists) can still
-   grow past the viewport and scroll normally.
-   This works with no wrapper div because Layout renders a bare fragment, so
-   the header, shell and footer are all direct children of #root. */
 #root { min-height: 100vh; display: flex; flex-direction: column; }
-.app-shell { flex: 1 0 auto; padding: 20px 40px; }
+.app-shell {
+    flex: 1 0 auto;
+    padding: 20px 40px;
+
+    /* NEW: Turns the shell into a flex column so pages can stretch to the footer */
+    display: flex;
+    flex-direction: column;
+}
 
 /* ===== Login / Register Standard User Auth (au-) ===== */
 .au-wrap { display: flex; justify-content: center; padding: 60px 20px; font-family: system-ui, -apple-system, sans-serif; }
@@ -503,10 +698,25 @@ input.ar-input.input-error { outline: 1px solid #ff8787; }
 .au-host-email-ok { color: #047857; }
 
 /* ===== Layout shell (lay-) ===== */
-/* flex-shrink: 0 so the footer keeps its height and the growing shell absorbs
-   the spare space instead. The <p> margin is zeroed because the default 1em
-   top+bottom was adding ~26px of dead height on top of the padding. */
-.lay-footer { flex-shrink: 0; padding: 14px 40px; margin-top: 40px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 13px; color: #64748b; background-color: #ffffff; }
+.lay-footer {
+    flex-shrink: 0;
+    padding: 14px 40px;
+    /* margin-top: 40px; -> Removed so it sits flush at the bottom */
+    border-top: 1px solid #e2e8f0;
+    text-align: center;
+    font-size: 13px;
+    color: #64748b;
+    background-color: #ffffff;
+    /*margin-top: 5px;*/
+
+    /* NEW: Makes the footer lock to the bottom of the screen */
+    position: sticky;
+    bottom: 0;
+    z-index: 1000;
+
+    /* NEW: Adds a subtle drop shadow pointing UPWARDS to separate it from scrolling content */
+    box-shadow: 0 -4px 3px -1px rgba(0, 0, 0, 0.05);
+}
 .lay-footer p { margin: 0; }
 .lay-footer a { color: #4f46e5; text-decoration: none; font-weight: 600; }
-.lay-footer a:hover { text-decoration: underline; }
+.lay-footer a:hover { text-decoration: underline; }footer a:hover { text-decoration: underline; }

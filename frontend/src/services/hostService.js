@@ -14,7 +14,7 @@ export const updateMyEvent = (id, eventData) => api.put(HOST.EVENT_BY_ID(id), ev
 
 export const deleteMyEvent = (id) => api.delete(HOST.EVENT_BY_ID(id));
 
-export const getMyEventAttendees = (eventId, page = 0, size = 100) =>
+export const getMyEventAttendees = (eventId, page = 0, size = 30) =>
     api.get(HOST.ATTENDEES(eventId), { params: { page, size } });
 
 export const getMyEventPayments = (eventId) =>

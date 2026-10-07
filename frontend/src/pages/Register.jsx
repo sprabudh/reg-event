@@ -22,7 +22,7 @@ import {
 const Register = () => {
     const { field, errors, isSubmitting, apiError, matchState, control, onSubmit } = useAuthForm({
         schema: registerSchema,
-        submit: registerUser,//Api function to call
+        submit: registerUser,
         errorMessage: ERROR_MESSAGES.REGISTRATION_FAILED,
         buildPayload: ({ name, email, password, accountType }) => ({ name, email, password, accountType }),
         defaultValues: {
@@ -34,17 +34,12 @@ const Register = () => {
         }
     });
 
-    // Live host-domain feedback. Watched rather than derived from `errors`,
-    // because RHF only re-runs validation on its own schedule (blur/submit),
-    // so an error-driven message would sit stale until the user left the field.
     const accountType = useWatch({ control, name: 'accountType' });
     const email = useWatch({ control, name: 'email' });
 
     const isHost = accountType === ACCOUNT_TYPES.HOST;
     const trimmedEmail = (email || '').trim();
 
-    // Don't nag before the user has typed anything, and treat an empty field
-    // as "not yet invalid" so we don't duplicate the required-field message.
     const emailTyped = trimmedEmail.length > 0;
     const hostEmailOk = trimmedEmail.toLowerCase().endsWith(HOST_EMAIL_SUFFIX);
     const showHostEmailError = isHost && emailTyped && !hostEmailOk;
@@ -56,12 +51,9 @@ const Register = () => {
                 <h1 className="au-brand">{PAGE_LABELS.BRAND}</h1>
                 <h2 className="au-sub">{PAGE_LABELS.REGISTER_SUBTITLE}</h2>
 
-
                 {apiError && <div className="au-error">{apiError}</div>}
 
                 <form onSubmit={onSubmit} className="au-form" noValidate>
-                    {/* Account type. Uses the same .ef-checks-row pattern as
-                        EventForm so it matches the rest of the app. */}
                     <div className="au-type-row">
                         <label className="au-type-option">
                             <input
@@ -98,16 +90,15 @@ const Register = () => {
                     <Input
                         type="email"
                         placeholder={FORM_LABELS.EMAIL}
-                        aria-invalid={errors.email ? 'true' : undefined}
-                        className={`au-input ${errors.email ? 'input-error' : ''}`}
+                        aria-invalid={errors.email || showHostEmailError ? 'true' : undefined}
+                        className={`au-input ${errors.email || showHostEmailError ? 'input-error' : ''}`}
                         {...field('email')}
                     />
-                    {errors.email && (
+
+                    {/* FIX: Only show Zod's email error if we aren't already showing the manual live Host error */}
+                    {errors.email && !showHostEmailError && (
                         <p className="au-live-feedback feedback-error">{errors.email.message}</p>
                     )}
-                    {/* Only while Host is chosen, and only once it is actually
-                        wrong -- this used to render unconditionally inside an
-                        error-styled box, which read as a permanent failure. */}
                     {showHostEmailError && (
                         <p className="au-live-feedback feedback-error" role="alert">
                             {HOST_EMAIL_ERROR}

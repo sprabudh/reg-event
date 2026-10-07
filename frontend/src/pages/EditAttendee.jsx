@@ -42,10 +42,11 @@ const EditAttendee = () => {
                 onClick={() => navigate(-1)}
                 className="ea-back"
             >
-                ← Go Back
+                &larr; Go Back
             </span>
 
-            <div className="card">
+            {/* Changed from "card" to "ea-card" */}
+            <div className="ea-card">
                 <h2 className="ea-title">{canManageAttendee ? 'Edit Attendee' : 'Edit My Registration'}</h2>
 
                 {error && (
@@ -77,7 +78,7 @@ const EditAttendee = () => {
                         )}
                     </div>
 
-                    <button type="submit" className="btn ea-submit">
+                    <button type="submit" className="ea-submit">
                         Save Changes
                     </button>
                 </form>

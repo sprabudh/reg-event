@@ -159,9 +159,20 @@ public class AttendeeService {
     private void recordCancellation(Attendee attendee) {
         paymentRepository.findByAttendeeId(attendee.getId()).ifPresentOrElse(
                 payment -> {
-                    Event event = attendee.getEvent();
+                    // FIX: Fetch a fresh event directly from the database via EventService.
+                    // This prevents Hibernate Proxy bugs where attendee.getEvent().getIsRefundable()
+                    // returns stale or incorrect default boolean data!
+                    Event event = eventService.getEventById(attendee.getEvent().getId());
+
                     boolean refundable = event != null && Boolean.TRUE.equals(event.getIsRefundable());
-                    payment.setRefundStatus(refundable ? RefundStatus.REFUNDED : RefundStatus.FORFEITED);
+
+                    // FIX: Paid events get REFUNDED or FORFEITED. Free events get NONE.
+                    if (payment.getAmount() != null && payment.getAmount() > 0) {
+                        payment.setRefundStatus(refundable ? RefundStatus.REFUNDED : RefundStatus.FORFEITED);
+                    } else {
+                        payment.setRefundStatus(RefundStatus.NONE);
+                    }
+
                     if (payment.getAttendeeName() == null || payment.getAttendeeName().isBlank()) {
                         payment.setAttendeeName(attendee.getName());
                     }
@@ -170,7 +181,8 @@ public class AttendeeService {
                 },
                 // No payment record (free event or legacy unpaid) -> create a ₹0 cancellation record
                 () -> {
-                    Event event = attendee.getEvent();
+                    // Also fetch fresh event here to be safe
+                    Event event = eventService.getEventById(attendee.getEvent().getId());
                     Payment payment = new Payment();
                     payment.setAttendeeId(attendee.getId());
                     payment.setAttendeeName(attendee.getName());

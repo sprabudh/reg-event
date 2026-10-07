@@ -5,6 +5,8 @@ import { getCategories } from '../services/categoryService';
 import { getUserRole } from '../services/authService';
 import { getMyRegistrations } from '../services/attendeeService';
 import { useConfirm } from '../hooks/useConfirm';
+import Pagination from '../components/ui/Pagination';
+import { formatHostName } from '../utils/format';
 import {
     APP_ROUTES,
     CONFIRM_LABELS,
@@ -22,7 +24,7 @@ const EventsList = () => {
     const [events, setEvents] = useState([]);
     const [categories, setCategories] = useState([]);
     const [registrations, setRegistrations] = useState({});
-    const [currentPage, setCurrentPage] = useState(PAGINATION.DEFAULT_PAGE);
+    const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -52,7 +54,6 @@ const EventsList = () => {
             .catch(() => console.error("Failed to fetch categories"));
     }, []);
 
-    // Both regular attendees (USER) and Hosts browsing the public catalog load their registrations
     useEffect(() => {
         if (!isAdmin) {
             getMyRegistrations()
@@ -87,53 +88,54 @@ const EventsList = () => {
     };
 
     return (
-        <div>
-            <div className="el-toolbar">
-                <h2>Event coming up...</h2>
-                {isAdmin && (
-                    <Link to={APP_ROUTES.CREATE_EVENT} className="btn">+ Create Event</Link>
-                )}
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                position: 'sticky',
+                top: '64px',
+                zIndex: 900,
+                backgroundColor: '#F8FAFC',
+                padding: '8px 0',
+                marginBottom: '10px' /* REDUCED FROM 25px TO 10px */
+            }}>
+                <div style={{ flex: 1 }}>
+                    <h2 style={{ margin: 0, color: '#111827', whiteSpace: 'nowrap' }}>Event coming up...</h2>
+                </div>
 
-            <div className="el-filters">
-                <input
-                    type="text"
-                    placeholder="Search events by name..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setCurrentPage(PAGINATION.DEFAULT_PAGE);
-                    }}
-                    className="el-search"
-                />
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', flex: 2 }}>
+                    <input
+                        type="text"
+                        placeholder="Search events..."
+                        value={searchTerm}
+                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0); }}
+                        className="el-search"
+                        style={{ margin: 0, width: '280px', padding: '8px 12px' }}
+                    />
 
-                <select
-                    value={selectedCategoryId}
-                    onChange={(e) => {
-                        setSelectedCategoryId(e.target.value);
-                        setCurrentPage(PAGINATION.DEFAULT_PAGE);
-                    }}
-                    className="el-select"
-                >
-                    <option value="">All Categories</option>
-                    {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                </select>
-
-                {(searchTerm || selectedCategoryId) && (
-                    <button
-                        type="button"
-                        className="btn btn-secondary el-clear"
-                        onClick={() => {
-                            setSearchTerm('');
-                            setSelectedCategoryId('');
-                            setCurrentPage(PAGINATION.DEFAULT_PAGE);
-                        }}
+                    <select
+                        value={selectedCategoryId}
+                        onChange={(e) => { setSelectedCategoryId(e.target.value); setCurrentPage(0); }}
+                        className="el-select"
+                        style={{ margin: 0, minWidth: '160px', padding: '8px 30px 8px 12px' }}
                     >
-                        Clear Filters
-                    </button>
-                )}
+                        <option value="">All Categories</option>
+                        {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                    </select>
+
+                    {(searchTerm || selectedCategoryId) && (
+                        <button type="button" className="btn btn-secondary" onClick={() => { setSearchTerm(''); setSelectedCategoryId(''); setCurrentPage(0); }} style={{ padding: '8px 16px' }}>
+                            Clear
+                        </button>
+                    )}
+                </div>
+
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                    {isAdmin && (
+                        <Link to={APP_ROUTES.CREATE_EVENT} className="btn" style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}>+ Create Event</Link>
+                    )}
+                </div>
             </div>
 
             {errorMessage && <div className="el-error">⚠️ {errorMessage}</div>}
@@ -174,7 +176,7 @@ const EventsList = () => {
 
                                 <div className="el-details">
                                     <p className="el-row">
-                                        <strong>Hosted By:</strong> <span>{event.hostName || 'Admin'}</span>
+                                        <strong>Hosted By:</strong> <span>{formatHostName(event.hostName)}</span>
                                     </p>
                                     <p className="el-row">
                                         <strong>Date:</strong> <span>{event.date}</span>
@@ -205,13 +207,7 @@ const EventsList = () => {
                 )}
             </div>
 
-            {totalPages > 1 && (
-                <div className="el-pager">
-                    <button className="btn btn-secondary" disabled={currentPage === 0} onClick={() => setCurrentPage(currentPage - 1)}>Previous</button>
-                    <span className="el-page-txt">Page {currentPage + 1} of {totalPages}</span>
-                    <button className="btn btn-secondary" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(currentPage + 1)}>Next</button>
-                </div>
-            )}
+            <Pagination page={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
         </div>
     );
 };

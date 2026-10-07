@@ -1,5 +1,6 @@
 package com.example.eventreg.controller;
 
+import com.example.eventreg.dto.EventCreationResponse;
 import com.example.eventreg.entity.Event;
 import com.example.eventreg.entity.Payment;
 import com.example.eventreg.service.HostEventService;
@@ -24,8 +25,11 @@ public class HostEventController {
     }
 
     @PostMapping
-    public ResponseEntity<Event> submitEvent(@Valid @RequestBody Event event, Principal principal) {
-        return new ResponseEntity<>(hostEventService.submitEvent(event, principal), HttpStatus.CREATED);
+    public ResponseEntity<EventCreationResponse> submitEvent(@Valid @RequestBody Event event, Principal principal) {
+        Event submittedEvent = hostEventService.submitEvent(event, principal);
+        EventCreationResponse response =
+                EventCreationResponse.from(submittedEvent, "Event submitted for approval.");
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping

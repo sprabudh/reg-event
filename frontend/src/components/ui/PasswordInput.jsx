@@ -2,30 +2,13 @@ import { useState } from 'react';
 import Input from './Input';
 import { ERROR_MESSAGES } from '../../constants';
 
-/**
- * Password input with a Show/Hide toggle sitting inside the field.
- *
- * The <input> is uncontrolled so it can be driven by react-hook-form's
- * `register()` (ref/name/onChange/onBlur are spread onto it).
- *
- * Renders the same DOM the hand-rolled version used:
- *   <div class="au-input-wrapper">
- *     <input class="au-input au-input-padded">
- *     <button class="au-toggle-btn">Show</button>
- *   </div>
- *   <red banner when invalid>
- *   <match line>
- *
- * Pass `matchState` as null to hide the match line; the page decides that
- * based on whether the confirm field has any value yet.
- */
 const PasswordInput = ({
-    error,
-    matchState,
-    variant = 'au',
-    className = '',
-    ...rest
-}) => {
+                           error,
+                           matchState,
+                           variant = 'au',
+                           className = '',
+                           ...rest
+                       }) => {
     const [visible, setVisible] = useState(false);
 
     const isAdmin = variant === 'ar';
@@ -50,7 +33,8 @@ const PasswordInput = ({
                 </button>
             </div>
 
-            {error && (
+            {/* FIX: Don't show the pink box for password mismatch, because matchState handles it below */}
+            {error && error !== ERROR_MESSAGES.PASSWORD_MISMATCH && (
                 <div className={isAdmin ? 'ar-format-feedback' : 'au-format-feedback'}>
                     {error}
                 </div>

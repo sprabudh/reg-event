@@ -19,11 +19,21 @@ export const REFUND_STATUS = {
     FORFEITED: 'FORFEITED'
 };
 
+/**
+ * Mirrors com.example.eventreg.entity.ApprovalStatus on the backend. Used for
+ * the approval-status pill shown on the event cards/detail pages.
+ */
+export const APPROVAL_STATUS = {
+    PENDING: 'PENDING',
+    APPROVED: 'APPROVED',
+    REJECTED: 'REJECTED'
+};
+
 /** Default page sizes. EventsList uses 15 (3 rows of 5 cards). */
 export const PAGINATION = {
     DEFAULT_PAGE: 0,
     EVENTS_PAGE_SIZE: 15,
-    LARGE_PAGE_SIZE: 100
+    LARGE_PAGE_SIZE: 30
 };
 
 export const MOBILE_REGEX = /^\d{10}$/;
@@ -81,6 +91,9 @@ export const STATUS_BADGE_CLASSES = {
 
 export const DEFAULT_STATUS_BADGE_CLASS = 'bd-default';
 
+/** Initial/empty shape for the event stats object. */
+export const EMPTY_EVENT_STATS = { capacity: 0, registered: 0, available: 0 };
+
 /**
  * Status -> class maps for the EventDetails admin table and the user-facing
  * "your registration status" pill. Module-private: callers use the two
@@ -104,3 +117,17 @@ export const getAttendeeBadgeClass = (status) =>
 
 export const getAttendeeStatusClass = (status) =>
     ATTENDEE_STATUS_INLINE_CLASSES[status] || ATTENDEE_STATUS_INLINE_CLASSES[REGISTRATION_STATUS.CONFIRMED];
+
+/**
+ * Badge class per approval status. Module-private: callers use the helper
+ * below, which keeps the original inline lookups' fallback to 'bd-default'
+ * for any unrecognised status.
+ */
+const APPROVAL_BADGE_CLASSES = {
+    [APPROVAL_STATUS.PENDING]: 'bd-orange',
+    [APPROVAL_STATUS.APPROVED]: 'bd-green',
+    [APPROVAL_STATUS.REJECTED]: 'bd-indigo'
+};
+
+export const getApprovalBadgeClass = (status) =>
+    APPROVAL_BADGE_CLASSES[status] || DEFAULT_STATUS_BADGE_CLASS;

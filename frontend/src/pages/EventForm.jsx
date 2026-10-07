@@ -6,16 +6,13 @@ import { getUserRole } from '../services/authService';
 import { getCategories } from '../services/categoryService';
 import Field from '../components/ui/Field';
 import { APP_ROUTES, ERROR_MESSAGES, ROLES } from '../constants';
-import { getErrorMessage } from '../utils/errors';
+import { getErrorMessage, getFieldErrors } from '../utils/errors';
 
 const EventForm = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
 
-    // Same form for admins and hosts. A host's copy is persisted under
-    // /api/host/** and lands as PENDING instead of publishing immediately --
-    // that difference lives entirely in the service call below.
     const isHost = getUserRole() === ROLES.HOST;
     const backPath = isHost ? APP_ROUTES.HOST_EVENTS : APP_ROUTES.EVENTS;
 
@@ -33,6 +30,7 @@ const EventForm = () => {
     });
     const [categories, setCategories] = useState([]);
     const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
 
     useEffect(() => {
         getCategories()
@@ -40,8 +38,6 @@ const EventForm = () => {
             .catch(() => console.error('Failed to load categories'));
 
         if (isEditMode) {
-            // A host must read through their own endpoint, otherwise they'd be
-            // shown an event the backend will refuse to let them save.
             const load = isHost ? getMyEventById(id) : getEventById(id);
 
             load
@@ -66,6 +62,11 @@ const EventForm = () => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+
+        if (fieldErrors[name] || fieldErrors['category.id']) {
+            setFieldErrors({ ...fieldErrors, [name]: undefined, 'category.id': undefined });
+        }
+
         if (name === 'category') {
             setFormData({ ...formData, category: { id: value } });
         } else if (type === 'checkbox') {
@@ -77,7 +78,14 @@ const EventForm = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const payload = { ...formData, price: formData.price === '' ? 0 : formData.price };
+        setError('');
+        setFieldErrors({});
+
+        const payload = {
+            ...formData,
+            price: formData.price === '' ? 0 : formData.price,
+            category: formData.category.id ? { id: formData.category.id } : null
+        };
 
         const apiCall = isHost
             ? (isEditMode ? updateMyEvent(id, payload) : submitEvent(payload))
@@ -85,7 +93,16 @@ const EventForm = () => {
 
         apiCall
             .then(() => navigate(backPath))
-            .catch((err) => setError(getErrorMessage(err, ERROR_MESSAGES.SAVE_EVENT_FAILED(isEditMode ? 'update' : 'create'))));
+            .catch((err) => {
+                const extractedFieldErrors = getFieldErrors(err);
+
+                if (Object.keys(extractedFieldErrors).length > 0) {
+                    setFieldErrors(extractedFieldErrors);
+                    setError('Please fix the errors below.');
+                } else {
+                    setError(getErrorMessage(err, ERROR_MESSAGES.SAVE_EVENT_FAILED(isEditMode ? 'update' : 'create')));
+                }
+            });
     };
 
     return (
@@ -98,8 +115,6 @@ const EventForm = () => {
                     </h2>
                 </div>
 
-                {/* Approval is the publish step, so a host needs to know their
-                    submission is not live yet. Admin sees nothing here. */}
                 {isHost && !isEditMode && (
                     <div className="alert-success">
                         Submitted events are reviewed by an admin before they appear in the catalog.
@@ -108,10 +123,11 @@ const EventForm = () => {
 
                 {error && <div className="ef-error">{error}</div>}
 
-                <form onSubmit={handleSubmit} className="ef-form">
-                    <Field label="Event Name" name="name" value={formData.name} onChange={handleChange} required />
+                <form onSubmit={handleSubmit} className="ef-form" noValidate>
 
-                    <Field label="Event Category" name="category" value={formData.category.id} onChange={handleChange} required>
+                    <Field label="Event Name" name="name" value={formData.name} onChange={handleChange} error={fieldErrors.name} required />
+
+                    <Field label="Event Category" name="category" value={formData.category.id} onChange={handleChange} error={fieldErrors['category.id'] || fieldErrors.category} required>
                         <select name="category" value={formData.category.id} onChange={handleChange} className="ef-input" required>
                             <option value="">Select a Category</option>
                             {categories.map((cat) => (
@@ -121,16 +137,16 @@ const EventForm = () => {
                     </Field>
 
                     <div className="ef-grid2">
-                        <Field label="Date" name="date" type="date" value={formData.date} onChange={handleChange} required />
-                        <Field label="Time" name="time" type="time" value={formData.time} onChange={handleChange} />
+                        <Field label="Date" name="date" type="date" value={formData.date} onChange={handleChange} error={fieldErrors.date} required />
+                        <Field label="Time" name="time" type="time" value={formData.time} onChange={handleChange} error={fieldErrors.time} required />
                     </div>
 
                     <div className="ef-grid2">
-                        <Field label="Duration" name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g., 2 Hours" />
-                        <Field label="Capacity" name="capacity" type="number" value={formData.capacity} onChange={handleChange} required min="1" />
+                        <Field label="Duration" name="duration" value={formData.duration} onChange={handleChange} error={fieldErrors.duration} placeholder="e.g., 2 Hours" required />
+                        <Field label="Capacity" name="capacity" type="number" value={formData.capacity} onChange={handleChange} error={fieldErrors.capacity} required min="1" />
                     </div>
 
-                    <Field label="Price (Leave empty or 0 for Free)" name="price" type="number" value={formData.price} onChange={handleChange} placeholder="e.g., 50.00" min="0" step="0.01" />
+                    <Field label="Price (Enter 0 for Free)" name="price" type="number" value={formData.price} onChange={handleChange} error={fieldErrors.price} placeholder="e.g., 50.00" min="0" step="0.01" required />
 
                     <div className="ef-checks-row">
                         <div className="ef-check-item">
@@ -144,7 +160,7 @@ const EventForm = () => {
                     </div>
 
                     {!formData.isOnline && (
-                        <Field label="Location" name="location" value={formData.location} onChange={handleChange} placeholder="e.g., Convention Center, Hall A" />
+                        <Field label="Location" name="location" value={formData.location} onChange={handleChange} error={fieldErrors.location} placeholder="e.g., Convention Center, Hall A" />
                     )}
 
                     <button type="submit" className="ef-btn">

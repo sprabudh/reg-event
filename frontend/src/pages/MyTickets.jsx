@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getMyTickets, deleteAttendee } from '../services/attendeeService';
 import { useConfirm } from '../hooks/useConfirm';
+import useFlash from '../hooks/useFlash';
 import {
     APP_ROUTES,
     CONFIRM_LABELS,
@@ -19,7 +20,7 @@ const MyTickets = () => {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const [success, flash] = useFlash();
     const confirm = useConfirm();
 
     useEffect(() => {
@@ -46,8 +47,7 @@ const MyTickets = () => {
         deleteAttendee(ticket.id)
             .then(() => {
                 setTickets((prev) => prev.filter((t) => t.id !== ticket.id));
-                setSuccess(SUCCESS_MESSAGES.CANCEL_REGISTRATION_OK);
-                setTimeout(() => setSuccess(''), 3000);
+                flash(SUCCESS_MESSAGES.CANCEL_REGISTRATION_OK);
             })
             .catch(() => setError(ERROR_MESSAGES.CANCEL_REGISTRATION_FAILED));
     };

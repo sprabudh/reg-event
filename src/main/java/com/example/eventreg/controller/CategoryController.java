@@ -23,7 +23,9 @@ public class CategoryController {
 
     @GetMapping
     public ResponseEntity<List<Category>> getAllCategories() {
-        return ResponseEntity.ok(categoryRepository.findAll());
+        // Replace categoryRepository.findAll() with this:
+        List<Category> sortedCategories = categoryRepository.findAllByOrderByNameAsc();
+        return ResponseEntity.ok(sortedCategories);
     }
 
     @PostMapping

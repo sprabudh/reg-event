@@ -7,11 +7,11 @@ export const registerAttendee = (eventId, attendeeData) => {
     return api.post(ATTENDEES.REGISTER(eventId), attendeeData);
 };
 
-export const getAttendeesByEvent = (eventId, page = 0, size = 100) => {
+export const getAttendeesByEvent = (eventId, page = 0, size = 30) => {
     return api.get(ATTENDEES.BY_EVENT(eventId), { params: { page, size } });
 };
 
-export const getMyTickets = (page = 0, size = 100) => {
+export const getMyTickets = (page = 0, size = 30) => {
     return api.get(ATTENDEES.ME, { params: { page, size } });
 };
 

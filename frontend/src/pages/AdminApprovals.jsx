@@ -2,16 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getPendingEvents, approveEvent, rejectEvent } from '../services/hostService';
 import { useConfirm } from '../hooks/useConfirm';
-import { APP_ROUTES, buildEventDetailPath } from '../constants';
+import useFlash from '../hooks/useFlash';
+import { APP_ROUTES, buildEventDetailPath, getApprovalBadgeClass } from '../constants';
 import { getErrorMessage } from '../utils/errors';
-
-const STATUS_BADGE = { PENDING: 'bd-orange', APPROVED: 'bd-green', REJECTED: 'bd-indigo' };
 
 const AdminApprovals = () => {
     const [events, setEvents] = useState([]);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(true);
+    const [success, flash] = useFlash();
     const confirm = useConfirm();
 
     const load = useCallback(() => {
@@ -25,11 +24,6 @@ const AdminApprovals = () => {
     }, []);
 
     useEffect(() => { load(); }, [load]);
-
-    const flash = (msg) => {
-        setSuccess(msg);
-        setTimeout(() => setSuccess(''), 3000);
-    };
 
     const handleApproveEvent = async (id) => {
         const ok = await confirm({
@@ -79,7 +73,7 @@ const AdminApprovals = () => {
                         <div key={event.id} className="el-card">
                             <h3 className="el-title">
                                 {event.name}{' '}
-                                <span className={`badge-pill ${STATUS_BADGE[event.approvalStatus] || 'bd-default'}`}>
+                                <span className={`badge-pill ${getApprovalBadgeClass(event.approvalStatus)}`}>
                                     {event.approvalStatus}
                                 </span>
                             </h3>

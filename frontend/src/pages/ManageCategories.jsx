@@ -16,15 +16,19 @@ const ManageCategories = () => {
             .catch(() => setError(ERROR_MESSAGES.LOAD_CATEGORIES_FAILED));
     }, []);
 
-    // Role is enforced by RoleRoute in App.jsx, so this no longer needs to
-    // check it -- that check ran after the first render, which briefly showed
-    // the admin form to a non-admin before bouncing them away.
     useEffect(() => {
         fetchCategories();
     }, [fetchCategories]);
 
     const handleAdd = (e) => {
         e.preventDefault();
+
+        // Custom UI validation to replace the Windows/Browser popup
+        if (!newCategory.trim()) {
+            setError('Category name is required.');
+            return;
+        }
+
         createCategory({ name: newCategory }).then(() => {
             setNewCategory('');
             setError('');
@@ -47,10 +51,25 @@ const ManageCategories = () => {
     return (
         <div className="mc-wrap">
             <h2>Manage Event Categories</h2>
-            {error && <div className="mc-error">⚠️ {error}</div>}
 
-            <form onSubmit={handleAdd} className="mc-form">
-                <input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} required placeholder="New category name..." className="mc-input"/>
+            {/* Shows the UI error instead of the browser popup */}
+            {error && <div className="mc-error" style={{ color: '#ef4444', backgroundColor: '#fee2e2', padding: '10px', borderRadius: '6px', marginBottom: '15px' }}>⚠️ {error}</div>}
+
+            {/* Added noValidate to disable the default browser popup */}
+            <form onSubmit={handleAdd} className="mc-form" noValidate>
+                <input
+                    type="text"
+                    value={newCategory}
+                    onChange={e => {
+                        setNewCategory(e.target.value);
+                        // Clear the error message instantly when the user starts typing
+                        if (error) setError('');
+                    }}
+                    required
+                    placeholder="New category name..."
+                    className={`mc-input ${error ? 'input-error' : ''}`}
+                    style={error ? { border: '1px solid #ef4444' } : {}}
+                />
                 <button type="submit" className="btn">+ Add</button>
             </form>
 

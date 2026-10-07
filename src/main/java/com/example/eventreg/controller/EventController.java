@@ -1,5 +1,6 @@
 package com.example.eventreg.controller;
 
+import com.example.eventreg.dto.EventCreationResponse;
 import com.example.eventreg.entity.Event;
 import com.example.eventreg.service.EventService;
 import com.example.eventreg.repository.AttendeeRepository;
@@ -23,9 +24,11 @@ public class EventController {
     private AttendeeRepository attendeeRepository;
 
     @PostMapping
-    public ResponseEntity<Event> createEvent(@Valid @RequestBody Event event) {
+    public ResponseEntity<EventCreationResponse> createEvent(@Valid @RequestBody Event event) {
         Event createdEvent = eventService.createEvent(event);
-        return new ResponseEntity<>(createdEvent, HttpStatus.CREATED);
+        EventCreationResponse response =
+                EventCreationResponse.from(createdEvent, "Event created successfully.");
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping

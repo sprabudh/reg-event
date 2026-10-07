@@ -3,43 +3,25 @@ import { Link } from 'react-router-dom';
 import { getMyEvents, deleteMyEvent } from '../services/hostService';
 import { getCategories } from '../services/categoryService';
 import { useConfirm } from '../hooks/useConfirm';
-import { APP_ROUTES, CONFIRM_LABELS, ERROR_MESSAGES, PROMPTS } from '../constants';
+import Pagination from '../components/ui/Pagination';
+import { APP_ROUTES, CONFIRM_LABELS, ERROR_MESSAGES, PROMPTS, PAGINATION, getApprovalBadgeClass } from '../constants';
 import { getErrorMessage } from '../utils/errors';
-
-const STATUS = {
-    PENDING: 'PENDING',
-    APPROVED: 'APPROVED',
-    REJECTED: 'REJECTED'
-};
-
-const STATUS_BADGE = {
-    [STATUS.PENDING]: 'bd-orange',
-    [STATUS.APPROVED]: 'bd-green',
-    [STATUS.REJECTED]: 'bd-indigo'
-};
-
-const formatHostName = (hostName) => {
-    if (!hostName) return 'Host';
-    if (hostName.includes('@')) {
-        const local = hostName.split('@')[0];
-        return local.charAt(0).toUpperCase() + local.slice(1);
-    }
-    return hostName;
-};
+import { formatHostName } from '../utils/format';
 
 const HostEvents = () => {
-    const [events, setEvents] = useState([]);
+    const [allEvents, setAllEvents] = useState([]);
     const [categories, setCategories] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
-    const confirm = useConfirm();
+
+    const [currentPage, setCurrentPage] = useState(0);
 
     const load = useCallback(() => {
-        getMyEvents()
+        getMyEvents(0, PAGINATION.LARGE_PAGE_SIZE || 1000)
             .then((res) => {
-                setEvents(res.data.content || []);
+                setAllEvents(res.data.content || []);
                 setError('');
             })
             .catch((err) => setError(getErrorMessage(err, ERROR_MESSAGES.LOAD_EVENTS_FAILED)))
@@ -48,7 +30,6 @@ const HostEvents = () => {
 
     useEffect(() => { load(); }, [load]);
 
-    // Fetch categories for the filter dropdown
     useEffect(() => {
         getCategories()
             .then(res => setCategories(res.data))
@@ -68,70 +49,84 @@ const HostEvents = () => {
             .catch((err) => setError(getErrorMessage(err, ERROR_MESSAGES.LOAD_EVENTS_FAILED)));
     };
 
-    // Client-side filtering for immediate live search results
-    const filteredEvents = events.filter((e) => {
+    const filteredEvents = allEvents.filter((e) => {
         const matchesSearch = e.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategoryId ? (e.category && e.category.id.toString() === selectedCategoryId) : true;
         return matchesSearch && matchesCategory;
     });
 
+    const pageSize = PAGINATION.EVENTS_PAGE_SIZE;
+    const totalPages = Math.ceil(filteredEvents.length / pageSize);
+    const paginatedEvents = filteredEvents.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+
+    useEffect(() => {
+        setCurrentPage(0);
+    }, [searchTerm, selectedCategoryId]);
+
     if (loading) return <div className="page-loading">Loading your events...</div>;
 
     return (
-        <div>
-            <div className="el-toolbar">
-                <h2>My Hosted Events</h2>
-                <Link to={APP_ROUTES.HOST_NEW_EVENT} className="btn">+ Request Event</Link>
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 200px)' }}>
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                position: 'sticky',
+                top: '64px',
+                zIndex: 900,
+                backgroundColor: '#F8FAFC',
+                padding: '15px 0',
+                marginBottom: '10px' /* REDUCED FROM 25px TO 10px */
+            }}>
+                <div style={{ flex: 1 }}>
+                    <h2 style={{ margin: 0, color: '#111827', whiteSpace: 'nowrap' }}>My Events</h2>
+                </div>
 
-            {/* Live Search & Category Filter Bar */}
-            <div className="el-filters">
-                <input
-                    type="text"
-                    placeholder="Search my events..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="el-search"
-                />
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', flex: 2 }}>
+                    <input
+                        type="text"
+                        placeholder="Search my events..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="el-search"
+                        style={{ margin: 0, width: '280px', padding: '8px 12px' }}
+                    />
 
-                <select
-                    value={selectedCategoryId}
-                    onChange={(e) => setSelectedCategoryId(e.target.value)}
-                    className="el-select"
-                >
-                    <option value="">All Categories</option>
-                    {categories.map(cat => (
-                        <option key={cat.id} value={cat.id.toString()}>{cat.name}</option>
-                    ))}
-                </select>
-
-                {(searchTerm || selectedCategoryId) && (
-                    <button
-                        type="button"
-                        className="btn btn-secondary el-clear"
-                        onClick={() => {
-                            setSearchTerm('');
-                            setSelectedCategoryId('');
-                        }}
+                    <select
+                        value={selectedCategoryId}
+                        onChange={(e) => setSelectedCategoryId(e.target.value)}
+                        className="el-select"
+                        style={{ margin: 0, minWidth: '160px', padding: '8px 30px 8px 12px' }}
                     >
-                        Clear Filters
-                    </button>
-                )}
+                        <option value="">All Categories</option>
+                        {categories.map(cat => <option key={cat.id} value={cat.id.toString()}>{cat.name}</option>)}
+                    </select>
+
+                    {(searchTerm || selectedCategoryId) && (
+                        <button type="button" className="btn btn-secondary" onClick={() => { setSearchTerm(''); setSelectedCategoryId(''); }} style={{ padding: '8px 16px' }}>
+                            Clear
+                        </button>
+                    )}
+                </div>
+
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Link to={APP_ROUTES.HOST_NEW_EVENT} className="btn" style={{ padding: '8px 16px', whiteSpace: 'nowrap' }}>+ Request Event</Link>
+                </div>
             </div>
 
             {error && <div className="el-error">{error}</div>}
 
-            {filteredEvents.length === 0 ? (
+            {paginatedEvents.length === 0 ? (
                 <div className="el-empty">
-                    {events.length === 0 ? "You haven't submitted any events yet." : "No events match your search."}
+                    {allEvents.length === 0 ? "You haven't submitted any events yet." : "No events match your search."}
                 </div>
             ) : (
                 <div className="el-grid">
-                    {filteredEvents.map((event) => (
+                    {paginatedEvents.map((event) => (
                         <div key={event.id} className="el-card">
                             <h3 className="el-title">
                                 {event.name}
-                                <span className={`badge-pill ${STATUS_BADGE[event.approvalStatus] || 'bd-default'}`}>
+                                <span className={`badge-pill ${getApprovalBadgeClass(event.approvalStatus)}`}>
                                     {event.approvalStatus || 'APPROVED'}
                                 </span>
                                 {event.expired && <span className="el-ended">Ended</span>}
@@ -139,7 +134,7 @@ const HostEvents = () => {
 
                             <div className="el-details">
                                 <p className="el-row">
-                                    <strong>Hosted By:</strong> <span>{formatHostName(event.hostName)}</span>
+                                    <strong>Hosted By:</strong> <span>{formatHostName(event.hostName, 'Host')}</span>
                                 </p>
                                 <p className="el-row">
                                     <strong>Date:</strong> <span>{event.date}</span>
@@ -169,6 +164,8 @@ const HostEvents = () => {
                     ))}
                 </div>
             )}
+
+            <Pagination page={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
         </div>
     );
 };
