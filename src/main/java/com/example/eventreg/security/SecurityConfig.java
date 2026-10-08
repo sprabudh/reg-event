@@ -24,12 +24,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
 
-    /**
-     * Vite auto-increments the dev port (5173 -> 5174 -> ...) when a port is
-     * already taken, which silently breaks every API call with a CORS
-     * preflight 403. Keep the list in application.properties up to date with
-     * whichever port you actually run the frontend on.
-     */
+
     @Value("${application.security.cors.allowed-origins}")
     private List<String> allowedOrigins;
 
@@ -41,6 +36,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Normal login and user registration are public
                         .requestMatchers("/api/auth/authenticate", "/api/auth/register").permitAll()
+
+                        // Session endpoints. /refresh must be public: the access
+                        // token has expired by the time it is called, so the
+                        // refresh token is the only credential available. /logout
+                        // is public so it still works when the access token has
+                        // already died.
+                        .requestMatchers("/api/auth/refresh", "/api/auth/logout").permitAll()
 
                         // --- Host role ---
                         // Authorities are unprefixed (User.getAuthorities uses
@@ -60,6 +62,13 @@ public class SecurityConfig {
                         // Allow ANY authenticated user to register for an event
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/events/*/attendees").authenticated()
 
+                        // Category management is admin-only. Without these the
+                        // requests fell through to anyRequest().authenticated()
+                        // below, so any logged-in attendee could create/delete
+                        // categories even though the UI hides it from them.
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/categories").hasAuthority("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/categories/**").hasAuthority("ADMIN")
+
                         // Only Admins can Create, Update, or Delete Events
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/events/**").hasAuthority("ADMIN")
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/events/**").hasAuthority("ADMIN")
@@ -77,10 +86,38 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Without an entry point Spring answers 403 for an unauthenticated
+                // request, which is indistinguishable from "signed in but not
+                // allowed". 401 + a JSON body lets the frontend tell the two
+                // apart and clear the dead session.
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(restAuthenticationEntryPoint())
+                        .accessDeniedHandler(restAccessDeniedHandler())
+                )
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public org.springframework.security.web.AuthenticationEntryPoint restAuthenticationEntryPoint() {
+        return (request, response, authException) -> writeError(response, 401, "Authentication required.");
+    }
+
+    @Bean
+    public org.springframework.security.web.access.AccessDeniedHandler restAccessDeniedHandler() {
+        return (request, response, accessDeniedException) ->
+                writeError(response, 403, "You do not have permission to perform this action.");
+    }
+
+    /** Same {status, message} envelope the GlobalExceptionHandler uses. */
+    private void writeError(jakarta.servlet.http.HttpServletResponse response, int status, String message)
+            throws java.io.IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write("{\"status\":" + status + ",\"message\":\"" + message + "\"}");
     }
 
     @Bean

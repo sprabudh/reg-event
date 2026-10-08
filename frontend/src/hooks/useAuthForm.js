@@ -5,26 +5,6 @@ import { storeSession } from '../services/authService';
 import { redirectTo } from '../utils/navigation';
 import { APP_ROUTES } from '../constants';
 
-/**
- * Shared wiring for the three auth forms.
- *
- * All three previously duplicated: the apiError state, useForm + zodResolver,
- * the register() calls, the useWatch match state, and an identical submit
- * handler (call the service -> storeSession -> full reload). This pulls that
- * into one place so the pages only describe what differs: schema, endpoint,
- * and the error message to show on failure.
- *
- * @param schema       Zod schema for the form
- * @param submit       async (payload) => axios response with .data
- * @param errorMessage message shown in the top banner when submit fails
- * @param mode         react-hook-form validation mode
- * @param buildPayload optional mapper applied before calling submit
- * @param defaultValues must list every field in the schema
- *
- * `control` is returned so a page can watch any extra field itself (Register
- * uses it to show the host-domain hint only while Host is selected) without
- * this hook having to know which fields exist.
- */
 const useAuthForm = ({
     schema,
     submit,

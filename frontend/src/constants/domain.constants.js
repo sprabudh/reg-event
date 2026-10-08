@@ -1,16 +1,9 @@
-/**
- * Domain vocabulary that is repeated across pages: the status enums the
- * backend returns, page-size defaults, and shared form/table labels.
- *
- * The status values mirror com.example.eventreg.entity.RegistrationStatus
- * and RefundStatus on the backend -- keep them in sync.
- */
+
 
 export const REGISTRATION_STATUS = {
     CONFIRMED: 'CONFIRMED',
     WAITLISTED: 'WAITLISTED',
-    CHECKED_IN: 'CHECKED_IN',
-    NOT_IN: 'NOT_IN'
+    CHECKED_IN: 'CHECKED_IN'
 };
 
 export const REFUND_STATUS = {
@@ -19,21 +12,18 @@ export const REFUND_STATUS = {
     FORFEITED: 'FORFEITED'
 };
 
-/**
- * Mirrors com.example.eventreg.entity.ApprovalStatus on the backend. Used for
- * the approval-status pill shown on the event cards/detail pages.
- */
 export const APPROVAL_STATUS = {
     PENDING: 'PENDING',
     APPROVED: 'APPROVED',
     REJECTED: 'REJECTED'
 };
 
-/** Default page sizes. EventsList uses 15 (3 rows of 5 cards). */
+
 export const PAGINATION = {
     DEFAULT_PAGE: 0,
     EVENTS_PAGE_SIZE: 15,
-    LARGE_PAGE_SIZE: 30
+    ATTENDEES_PAGE_SIZE: 30,
+    LARGE_PAGE_SIZE: 40
 };
 
 export const MOBILE_REGEX = /^\d{10}$/;
@@ -45,7 +35,8 @@ export const FORM_LABELS = {
     ADMIN_EMAIL: 'Admin Email Address',
     PASSWORD: 'Password',
     CONFIRM_PASSWORD: 'Confirm Password',
-    MOBILE_NUMBER: 'Mobile Number'
+    MOBILE_NUMBER: 'Mobile Number',
+    CATEGORY_NAME: 'New category name'
 };
 
 /** Headings and button text on the auth pages. */
@@ -57,9 +48,7 @@ export const PAGE_LABELS = {
     ADMIN_TITLE: 'Admin Setup Portal',
     LOGIN_CTA: 'Login',
     REGISTER_CTA: 'Register',
-    ADMIN_CTA: 'Create Admin Account',
-    LOGIN_LOADING: 'Signing in...',
-    REGISTER_LOADING: 'Creating account...'
+    ADMIN_CTA: 'Create Admin Account'
 };
 
 /** Nav + footer copy in the layout. */
@@ -83,9 +72,10 @@ export const TABLE_HEADERS = {
     DASHBOARD_EVENTS: ['Event Name', 'Date', 'Capacity', 'Action']
 };
 
-/** Badge class per registration status, used by MyTickets. */
+
 export const STATUS_BADGE_CLASSES = {
     [REGISTRATION_STATUS.CONFIRMED]: 'bd-green',
+    [REGISTRATION_STATUS.WAITLISTED]: 'bd-orange',
     [REGISTRATION_STATUS.CHECKED_IN]: 'bd-indigo'
 };
 
@@ -94,12 +84,6 @@ export const DEFAULT_STATUS_BADGE_CLASS = 'bd-default';
 /** Initial/empty shape for the event stats object. */
 export const EMPTY_EVENT_STATS = { capacity: 0, registered: 0, available: 0 };
 
-/**
- * Status -> class maps for the EventDetails admin table and the user-facing
- * "your registration status" pill. Module-private: callers use the two
- * helpers below, which keep the original inline lookups' fallback to the
- * CONFIRMED styling for any unrecognised status (e.g. NOT_IN).
- */
 const ATTENDEE_STATUS_BADGE_CLASSES = {
     [REGISTRATION_STATUS.CONFIRMED]: 'ed-badge-green',
     [REGISTRATION_STATUS.WAITLISTED]: 'ed-badge-orange',

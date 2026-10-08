@@ -2,35 +2,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConfirmContext } from './confirmContext';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 
-/**
- * Renders the single app-wide confirm dialog and exposes confirm() through
- * context.
- *
- * confirm(options) returns a Promise<boolean>, so call sites keep the shape
- * they had with window.confirm -- they just await it:
- *
- *   if (!await confirm({ message, tone: 'danger' })) return;
- *
- * The resolver lives in a ref rather than being called from inside a
- * setState updater: StrictMode can invoke updaters twice, and resolving a
- * promise is a side effect that has no business running in the render path.
- *
- * settle is stable (empty deps) on purpose -- ConfirmDialog relies on that to
- * avoid re-running its focus effect.
- */
+
 export const ConfirmProvider = ({ children }) => {
     const [request, setRequest] = useState(null);
     const resolverRef = useRef(null);
 
+    // A second confirm() while one is already open overwrote resolverRef, and the
+    // first caller then awaited a promise that could never settle -- the page
+    // just stopped responding to that action. Decline the superseded prompt
+    // before taking its place, so every caller gets an answer.
     const confirm = useCallback((options = {}) => new Promise((resolve) => {
+        resolverRef.current?.(false);
         resolverRef.current = resolve;
         setRequest(options);
     }), []);
 
     const settle = useCallback((result) => {
-        resolverRef.current?.(result);
+        const resolve = resolverRef.current;
         resolverRef.current = null;
         setRequest(null);
+        resolve?.(result);
     }, []);
 
     // Never leave a caller hanging if the provider unmounts mid-prompt.

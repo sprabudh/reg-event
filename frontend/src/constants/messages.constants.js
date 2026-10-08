@@ -35,19 +35,21 @@ export const ERROR_MESSAGES = {
     PASSWORD_FORMAT: 'Password requires 8+ characters, 1 uppercase, 1 lowercase, 1 number, and 1 symbol.',
     PASSWORD_MISMATCH: 'Passwords do not match',
     PASSWORD_MATCH: 'Passwords match',
-    REGISTRATION_FAILED: 'User Exits, Try a different email.',
+    REGISTRATION_FAILED: 'User already exists. Try a different email.',
     ADMIN_REGISTRATION_FAILED: 'Admin registration failed. Try a different email.',
     ATTENDEE_REGISTRATION_FAILED: 'Registration failed. Please try again.',
     MOBILE_INVALID: 'Mobile number must be exactly 10 digits.',
-    LOAD_EVENTS_FAILED: 'Failed to delete event.',
+    LOAD_EVENTS_FAILED: 'Failed to load your events. Please try again.',
+    DELETE_EVENT_FAILED: 'Failed to delete event.',
     LOAD_EVENT_DETAILS_FAILED: 'Failed to load event details.',
     SAVE_EVENT_FAILED: (verb) => `Failed to ${verb} event.`,
     LOAD_TICKETS_FAILED: 'Failed to load your tickets. Please try again later.',
     CANCEL_REGISTRATION_FAILED: 'Failed to cancel registration. Please try again.',
     LOAD_ATTENDEE_FAILED: 'Failed to load attendee data.',
     UPDATE_ATTENDEE_FAILED: 'Failed to update attendee. Check your inputs.',
-    LOAD_CATEGORIES_FAILED: 'Failed to load',
-    ADD_CATEGORY_FAILED: 'Failed to add category',
+    LOAD_CATEGORIES_FAILED: 'Failed to load categories.',
+    ADD_CATEGORY_FAILED: 'Failed to add category.',
+    CATEGORY_NAME_REQUIRED: 'Category name is required.',
     DELETE_CATEGORY_IN_USE: 'Cannot delete category in use.',
     LEGACY_TICKET_NO_UUID: 'Check-in failed: This attendee was registered before the ticketing system was added and has no valid ticket ID.',
     CHECK_IN_FAILED: 'Check-in failed. Please try again.'
@@ -58,8 +60,15 @@ export const SUCCESS_MESSAGES = {
     WAITLIST_OK: 'Event is full. You have been added to the waitlist!',
     CANCEL_REGISTRATION_OK: 'Registration cancelled successfully.',
     REGISTRATION_REMOVED: 'Registration removed successfully.',
+    DELETE_EVENT_OK: 'Event deleted successfully.',
+    DELETE_CATEGORY_OK: 'Category deleted successfully.',
+    ADD_CATEGORY_OK: 'Category added successfully.',
+    UPDATE_ATTENDEE_OK: 'Attendee updated successfully.',
     CHECK_IN_OK: (name) => `${name} has been successfully checked in!`
 };
+
+/** Reason stored when an admin rejects a submission from the approval queue. */
+export const REJECTION_REASON_ADMIN = 'Rejected by admin';
 
 /**
  * Copy for the 403 page. Kept here with the rest of the user-facing strings so
@@ -68,12 +77,17 @@ export const SUCCESS_MESSAGES = {
 export const ACCESS_DENIED_LABELS = {
     CODE: '403',
     TITLE: 'Access Denied',
-    MESSAGE: 'This page is restricted to administrators. Your account does not have the required permissions to view it.',
+    // Derived per required role so a non-admin route does not claim to be
+    // "restricted to administrators".
+    MESSAGE: 'Your account does not have the permissions required to view this page.',
+    MESSAGE_FOR_ROLE: (role) => `This page is restricted to ${String(role).toLowerCase()} accounts. Your account does not have the required permissions to view it.`,
+    NOT_FOUND_CODE: '404',
+    NOT_FOUND_TITLE: 'Page Not Found',
+    NOT_FOUND_MESSAGE: 'We could not find the page you were looking for. It may have been moved or removed.',
     CONTACT: 'If you believe you should have access, please contact an administrator.',
     SIGNED_IN_AS: 'Signed in as',
     CURRENT_ROLE: 'Your role',
     REQUIRES_ROLE: 'Requires role',
-    PAGE: 'Page',
     NO_ROLE: 'No role assigned',
     BACK_HOME: 'Back to Dashboard',
     BROWSE_EVENTS: 'Browse Events'

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import RoleRoute from './components/auth/RoleRoute';
@@ -16,7 +16,16 @@ import HostEvents from './pages/HostEvents';
 import HostEventDetail from './pages/HostEventDetail';
 import AdminApprovals from './pages/AdminApprovals';
 import Forbidden from './pages/Forbidden';
+import { isAuthenticated } from './services/authService';
 import { APP_ROUTES, ROLES } from './constants';
+
+/**
+ * Inverse of ProtectedRoute: keeps an already-signed-in user off the login and
+ * registration pages. Only a UX guard -- the real boundary is the backend.
+ */
+function PublicOnlyRoute({ children }) {
+    return isAuthenticated() ? <Navigate to={APP_ROUTES.HOME} replace /> : children;
+}
 
 function App() {
     return (
@@ -24,8 +33,10 @@ function App() {
             <Routes>
                 <Route element={<Layout />}>
                     {/* ---------- Public ---------- */}
-                    <Route path={APP_ROUTES.LOGIN} element={<Login />} />
-                    <Route path={APP_ROUTES.REGISTER} element={<Register />} />
+                    {/* Signed-in users landing on /login or /register were shown
+                        the form again; send them to their dashboard instead. */}
+                    <Route path={APP_ROUTES.LOGIN} element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+                    <Route path={APP_ROUTES.REGISTER} element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
 
                     {/* ---------- Auth only ---------- */}
                     <Route path={APP_ROUTES.HOME} element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -35,33 +46,26 @@ function App() {
 
                     {/* ---------- Admin only ---------- */}
                     <Route path={APP_ROUTES.CREATE_EVENT} element={<RoleRoute roles={ROLES.ADMIN}><EventForm /></RoleRoute>} />
-                    <Route path={`${APP_ROUTES.CREATE_EVENT}/*`} element={<RoleRoute roles={ROLES.ADMIN}><EventForm /></RoleRoute>} />
                     <Route path={APP_ROUTES.EDIT_EVENT} element={<RoleRoute roles={ROLES.ADMIN}><EventForm /></RoleRoute>} />
-                    <Route path="/edit-event/*" element={<RoleRoute roles={ROLES.ADMIN}><EventForm /></RoleRoute>} />
                     <Route path={APP_ROUTES.CATEGORIES} element={<RoleRoute roles={ROLES.ADMIN}><ManageCategories /></RoleRoute>} />
-                    <Route path={`${APP_ROUTES.CATEGORIES}/*`} element={<RoleRoute roles={ROLES.ADMIN}><ManageCategories /></RoleRoute>} />
                     <Route path={APP_ROUTES.ADMIN_SETUP} element={<RoleRoute roles={ROLES.ADMIN}><AdminRegister /></RoleRoute>} />
-                    <Route path={`${APP_ROUTES.ADMIN_SETUP}/*`} element={<RoleRoute roles={ROLES.ADMIN}><AdminRegister /></RoleRoute>} />
                     <Route path={APP_ROUTES.ADMIN_APPROVALS} element={<RoleRoute roles={ROLES.ADMIN}><AdminApprovals /></RoleRoute>} />
-                    <Route path="/admin/*" element={<RoleRoute roles={ROLES.ADMIN}><AdminApprovals /></RoleRoute>} />
-                    <Route path="/api/admin/*" element={<RoleRoute roles={ROLES.ADMIN}><AdminApprovals /></RoleRoute>} />
 
                     {/* ---------- Attendee & Host ----------
                         Unlocks /my-tickets for Hosts who booked other events */}
                     <Route path={APP_ROUTES.MY_TICKETS} element={<RoleRoute roles={[ROLES.USER, ROLES.HOST]}><MyTickets /></RoleRoute>} />
-                    <Route path={`${APP_ROUTES.MY_TICKETS}/*`} element={<RoleRoute roles={[ROLES.USER, ROLES.HOST]}><MyTickets /></RoleRoute>} />
 
                     {/* ---------- Host only ---------- */}
                     <Route path={APP_ROUTES.HOST_EVENTS} element={<RoleRoute roles={ROLES.HOST}><HostEvents /></RoleRoute>} />
                     <Route path={APP_ROUTES.HOST_NEW_EVENT} element={<RoleRoute roles={ROLES.HOST}><EventForm /></RoleRoute>} />
                     <Route path={APP_ROUTES.HOST_EDIT_EVENT} element={<RoleRoute roles={ROLES.HOST}><EventForm /></RoleRoute>} />
                     <Route path={APP_ROUTES.HOST_EVENT_DETAIL} element={<RoleRoute roles={ROLES.HOST}><HostEventDetail /></RoleRoute>} />
-                    <Route path="/host/*" element={<RoleRoute roles={ROLES.HOST}><HostEvents /></RoleRoute>} />
-                    <Route path="/api/host/*" element={<RoleRoute roles={ROLES.HOST}><HostEvents /></RoleRoute>} />
 
                     {/* ---------- Terminal States ---------- */}
-                    <Route path={APP_ROUTES.FORBIDDEN} element={<ProtectedRoute><Forbidden requiredRoles={ROLES.ADMIN} /></ProtectedRoute>} />
-                    <Route path="*" element={<ProtectedRoute><Forbidden requiredRoles={ROLES.ADMIN} /></ProtectedRoute>} />
+                    {/* The catch-all is a 404, not a permission failure: it used
+                        to render Forbidden with requiredRoles=ADMIN, telling any
+                        user who mistyped a URL that the page was admin-only. */}
+                    <Route path="*" element={<ProtectedRoute><Forbidden variant="notFound" /></ProtectedRoute>} />
                 </Route>
             </Routes>
         </BrowserRouter>

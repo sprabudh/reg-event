@@ -12,7 +12,7 @@ import {
  * as needed. `title` is passed because the admin page labels the section
  * "All Attendees (Admin View)".
  */
-const AttendeesTable = ({ title, attendees, event, searchTerm, onSearch, paymentByAttendee, onCheckIn, onDelete }) => (
+const AttendeesTable = ({ title, attendees, event, searchTerm, onSearch, paymentByAttendee, onCheckIn, onDelete, busyIds = [] }) => (
     <>
         <div className="ed-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
             <h3 className="ed-h3-flush" style={{ margin: 0, whiteSpace: 'nowrap' }}>{title}</h3>
@@ -23,18 +23,21 @@ const AttendeesTable = ({ title, attendees, event, searchTerm, onSearch, payment
                 onChange={(e) => onSearch(e.target.value)}
                 className="ed-search-input"
                 style={{ flex: 1, maxWidth: '350px' }}
+                aria-label="Search attendees by name or email"
             />
         </div>
 
         {attendees.length === 0 ? (
-            <p className="ed-muted">No attendees found.</p>
+            <p className="ed-muted">
+                {searchTerm.trim() ? 'No attendees match your search.' : 'No attendees found.'}
+            </p>
         ) : (
             <table className="ed-table">
                 <thead>
                 <tr>
                     {TABLE_HEADERS.ATTENDEES.map((header) => (
-                        <th key={header} className="ed-cell">{header}</th>
-                    ))}
+                    <th key={header} scope="col" className="ed-cell">{header}</th>
+                ))}
                 </tr>
                 </thead>
                 <tbody>
@@ -75,8 +78,9 @@ const AttendeesTable = ({ title, attendees, event, searchTerm, onSearch, payment
                             <td className="ed-cell ed-td-actions">
                                 {a.status === REGISTRATION_STATUS.CONFIRMED && (
                                     <button
+                                        type="button"
                                         onClick={() => onCheckIn(a)}
-                                        disabled={!a.ticketUuid}
+                                        disabled={!a.ticketUuid || busyIds.includes(a.id)}
                                         title={!a.ticketUuid ? 'Legacy User: No Ticket UUID' : 'Check In Attendee'}
                                         className={a.ticketUuid ? 'ed-btn-checkin ed-btn-checkin-on' : 'ed-btn-checkin ed-btn-checkin-off'}
                                     >
@@ -86,7 +90,7 @@ const AttendeesTable = ({ title, attendees, event, searchTerm, onSearch, payment
                                 <Link to={buildEditAttendeePath(a.id)} className="btn btn-small btn-secondary ed-btn-xs">
                                     Edit
                                 </Link>
-                                <button onClick={() => onDelete(a)} className="btn btn-small btn-danger ed-btn-xs">
+                                <button type="button" onClick={() => onDelete(a)} disabled={busyIds.includes(a.id)} className="btn btn-small btn-danger ed-btn-xs">
                                     Delete
                                 </button>
                             </td>

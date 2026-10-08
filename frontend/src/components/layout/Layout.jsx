@@ -10,10 +10,16 @@ import Footer from './Footer';
  */
 const Layout = () => (
     <>
+        {/* Skip link: without it, keyboard users tab through the whole nav on
+            every page change before reaching the content. */}
+        <a href="#main-content" className="lay-skip-link">Skip to main content</a>
+
         <Header />
-        <div className="app-shell">
+        {/* <main> landmark so the routed page is exposed as the document's main
+            region rather than an anonymous div. */}
+        <main id="main-content" className="app-shell">
             <Outlet />
-        </div>
+        </main>
         <Footer />
     </>
 );

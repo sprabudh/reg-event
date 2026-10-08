@@ -4,7 +4,17 @@ import { getMyEvents, deleteMyEvent } from '../services/hostService';
 import { getCategories } from '../services/categoryService';
 import { useConfirm } from '../hooks/useConfirm';
 import Pagination from '../components/ui/Pagination';
-import { APP_ROUTES, CONFIRM_LABELS, ERROR_MESSAGES, PROMPTS, PAGINATION, getApprovalBadgeClass } from '../constants';
+import {
+    APPROVAL_STATUS,
+    APP_ROUTES,
+    CONFIRM_LABELS,
+    ERROR_MESSAGES,
+    PROMPTS,
+    PAGINATION,
+    buildHostEditEventPath,
+    buildHostEventPath,
+    getApprovalBadgeClass
+} from '../constants';
 import { getErrorMessage } from '../utils/errors';
 import { formatHostName } from '../utils/format';
 
@@ -17,9 +27,10 @@ const HostEvents = () => {
     const [loading, setLoading] = useState(true);
 
     const [currentPage, setCurrentPage] = useState(0);
+    const confirm = useConfirm();
 
     const load = useCallback(() => {
-        getMyEvents(0, PAGINATION.LARGE_PAGE_SIZE || 1000)
+        getMyEvents(0, PAGINATION.LARGE_PAGE_SIZE)
             .then((res) => {
                 setAllEvents(res.data.content || []);
                 setError('');
@@ -46,22 +57,36 @@ const HostEvents = () => {
 
         deleteMyEvent(id)
             .then(() => load())
-            .catch((err) => setError(getErrorMessage(err, ERROR_MESSAGES.LOAD_EVENTS_FAILED)));
+            .catch((err) => setError(getErrorMessage(err, ERROR_MESSAGES.DELETE_EVENT_FAILED)));
     };
 
-    const filteredEvents = allEvents.filter((e) => {
-        const matchesSearch = e.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategoryId ? (e.category && e.category.id.toString() === selectedCategoryId) : true;
-        return matchesSearch && matchesCategory;
-    });
+    // Ended events are admin-only (the backend hides them for non-admins on
+    // /api/events, so EventsList needed no such filter; this page fetches the
+    // host's own rows directly and therefore has to drop them itself).
+    // Deleted events are gone from the server entirely, so they can never appear.
+    const filteredEvents = allEvents
+        .filter((e) => !e.expired)
+        .filter((e) => {
+            const matchesSearch = (e.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesCategory = selectedCategoryId ? (e.category && e.category.id.toString() === selectedCategoryId) : true;
+            return matchesSearch && matchesCategory;
+        })
+        // Nearest event date first, id as a stable tiebreaker.
+        .sort((a, b) => {
+            const byDate = String(a.date || '').localeCompare(String(b.date || ''));
+            return byDate !== 0 ? byDate : b.id - a.id;
+        });
 
     const pageSize = PAGINATION.EVENTS_PAGE_SIZE;
     const totalPages = Math.ceil(filteredEvents.length / pageSize);
-    const paginatedEvents = filteredEvents.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
-    useEffect(() => {
-        setCurrentPage(0);
-    }, [searchTerm, selectedCategoryId]);
+    // Clamp during render instead of correcting with an effect: deleting the last
+    // card of the last page leaves currentPage past the end, which would render
+    // an empty grid even though events still exist. Keeping the stored value and
+    // deriving the safe one also resets the page implicitly when the filter
+    // shrinks the result set (e.g. a search matching only page 0).
+    const safePage = totalPages > 0 ? Math.min(currentPage, totalPages - 1) : 0;
+    const paginatedEvents = filteredEvents.slice(safePage * pageSize, (safePage + 1) * pageSize);
 
     if (loading) return <div className="page-loading">Loading your events...</div>;
 
@@ -76,7 +101,7 @@ const HostEvents = () => {
                 zIndex: 900,
                 backgroundColor: '#F8FAFC',
                 padding: '15px 0',
-                marginBottom: '10px' /* REDUCED FROM 25px TO 10px */
+                marginBottom: '10px'
             }}>
                 <div style={{ flex: 1 }}>
                     <h2 style={{ margin: 0, color: '#111827', whiteSpace: 'nowrap' }}>My Events</h2>
@@ -87,14 +112,16 @@ const HostEvents = () => {
                         type="text"
                         placeholder="Search my events..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0); }}
                         className="el-search"
                         style={{ margin: 0, width: '280px', padding: '8px 12px' }}
+                        aria-label="Search my events"
                     />
 
                     <select
                         value={selectedCategoryId}
-                        onChange={(e) => setSelectedCategoryId(e.target.value)}
+                        onChange={(e) => { setSelectedCategoryId(e.target.value); setCurrentPage(0); }}
+                        aria-label="Filter by category"
                         className="el-select"
                         style={{ margin: 0, minWidth: '160px', padding: '8px 30px 8px 12px' }}
                     >
@@ -103,7 +130,7 @@ const HostEvents = () => {
                     </select>
 
                     {(searchTerm || selectedCategoryId) && (
-                        <button type="button" className="btn btn-secondary" onClick={() => { setSearchTerm(''); setSelectedCategoryId(''); }} style={{ padding: '8px 16px' }}>
+                        <button type="button" className="btn btn-secondary" onClick={() => { setSearchTerm(''); setSelectedCategoryId(''); setCurrentPage(0); }} style={{ padding: '8px 16px' }}>
                             Clear
                         </button>
                     )}
@@ -114,19 +141,25 @@ const HostEvents = () => {
                 </div>
             </div>
 
-            {error && <div className="el-error">{error}</div>}
+            {error && <div className="el-error" role="alert">{error}</div>}
 
             {paginatedEvents.length === 0 ? (
-                <div className="el-empty">
-                    {allEvents.length === 0 ? "You haven't submitted any events yet." : "No events match your search."}
-                </div>
+                error ? (
+                    <div className="el-empty">
+                        Could not load your events. Please try again.
+                    </div>
+                ) : (
+                    <div className="el-empty">
+                        {allEvents.length === 0 ? "You haven't submitted any events yet." : "No events match your search."}
+                    </div>
+                )
             ) : (
                 <div className="el-grid">
                     {paginatedEvents.map((event) => (
                         <div key={event.id} className="el-card">
                             <h3 className="el-title">
                                 {event.name}
-                                <span className={`badge-pill ${getApprovalBadgeClass(event.approvalStatus)}`}>
+                                <span className={`badge-pill ${getApprovalBadgeClass(event.approvalStatus || APPROVAL_STATUS.APPROVED)}`}>
                                     {event.approvalStatus || 'APPROVED'}
                                 </span>
                                 {event.expired && <span className="el-ended">Ended</span>}
@@ -154,18 +187,18 @@ const HostEvents = () => {
                             </div>
 
                             <div className="el-actions">
-                                <Link to={`/host/events/${event.id}`} className="el-btn-act el-bg-book">
+                                <Link to={buildHostEventPath(event.id)} className="el-btn-act el-bg-book">
                                     Manage
                                 </Link>
-                                <Link to={`/host/events/${event.id}/edit`} className="el-btn-edit">Edit</Link>
-                                <button onClick={() => handleDelete(event.id)} className="el-btn-del">Delete</button>
+                                <Link to={buildHostEditEventPath(event.id)} className="el-btn-edit">Edit</Link>
+                                <button type="button" onClick={() => handleDelete(event.id)} className="el-btn-del">Delete</button>
                             </div>
                         </div>
                     ))}
                 </div>
             )}
 
-            <Pagination page={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
+            <Pagination page={safePage} totalPages={totalPages} onChange={setCurrentPage} />
         </div>
     );
 };

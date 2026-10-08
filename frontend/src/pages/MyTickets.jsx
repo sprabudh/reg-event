@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { getMyTickets, deleteAttendee } from '../services/attendeeService';
 import { useConfirm } from '../hooks/useConfirm';
 import useFlash from '../hooks/useFlash';
+import Pagination from '../components/ui/Pagination';
 import {
     APP_ROUTES,
     CONFIRM_LABELS,
     DEFAULT_STATUS_BADGE_CLASS,
     ERROR_MESSAGES,
+    PAGINATION,
     PROMPTS,
     REFUND_STATUS,
     REGISTRATION_STATUS,
@@ -15,22 +17,26 @@ import {
     SUCCESS_MESSAGES,
     buildEventDetailPath
 } from '../constants';
+import { getErrorMessage } from '../utils/errors';
 
 const MyTickets = () => {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, flash] = useFlash();
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
     const confirm = useConfirm();
 
     useEffect(() => {
-        getMyTickets()
+        getMyTickets(currentPage, PAGINATION.EVENTS_PAGE_SIZE)
             .then((res) => {
                 setTickets(res.data.content || []);
+                setTotalPages(res.data.totalPages || 0);
             })
             .catch(() => setError(ERROR_MESSAGES.LOAD_TICKETS_FAILED))
             .finally(() => setLoading(false));
-    }, []);
+    }, [currentPage]);
 
     const sortedTickets = [...tickets].sort(
         (a, b) => new Date((a.eventDate) || 0) - new Date((b.eventDate) || 0)
@@ -48,21 +54,47 @@ const MyTickets = () => {
             .then(() => {
                 setTickets((prev) => prev.filter((t) => t.id !== ticket.id));
                 flash(SUCCESS_MESSAGES.CANCEL_REGISTRATION_OK);
+                setError('');
             })
-            .catch(() => setError(ERROR_MESSAGES.CANCEL_REGISTRATION_FAILED));
+            .catch((err) => setError(getErrorMessage(err, ERROR_MESSAGES.CANCEL_REGISTRATION_FAILED)));
     };
+
+    /**
+     * The print view is a raw HTML string written into a new document, so every
+     * interpolated value has to be escaped -- an event name or attendee name
+     * containing markup would otherwise execute in that window.
+     */
+    const escapeHtml = (value) =>
+        String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+    /**
+     * Single source for the venue line. The card and the printed ticket used to
+     * disagree: an online event that also had a location printed the venue but
+     * showed "Online Event" on screen.
+     */
+    const getLocationLabel = (ticket) =>
+        ticket.eventIsOnline ? 'Online Event' : (ticket.eventLocation || 'TBA');
 
     const handlePrint = (ticket) => {
         const statusClass = STATUS_BADGE_CLASSES[ticket.status] || DEFAULT_STATUS_BADGE_CLASS;
 
         const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
+        if (!printWindow) {
+            // Popup blocked: the click used to do nothing at all.
+            setError('Your browser blocked the print window. Allow pop-ups for this site, or use your browser\'s Print command.');
+            return;
+        }
 
         const html = `
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Ticket - ${ticket.eventName || 'Event'}</title>
+                <title>Ticket - ${escapeHtml(ticket.eventName || 'Event')}</title>
                 <style>
                     body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 40px; }
                     .ticket { max-width: 520px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; }
@@ -83,24 +115,24 @@ const MyTickets = () => {
                 <div class="ticket">
                     <div class="ticket-header">
                         <p>EVENTORA · ENTRY TICKET</p>
-                        <h2>${ticket.eventName || 'Event'}</h2>
-                        <p>${ticket.eventDate || ''} ${ticket.eventTime ? '· ' + ticket.eventTime : ''}</p>
+                        <h2>${escapeHtml(ticket.eventName || 'Event')}</h2>
+                        <p>${escapeHtml(ticket.eventDate || '')} ${ticket.eventTime ? '· ' + escapeHtml(ticket.eventTime) : ''}</p>
                     </div>
                     <div class="ticket-body">
                         <div class="ticket-qr">
                             ${ticket.qrCodeBase64
-                            ? `<img src="${ticket.qrCodeBase64}" alt="QR Code" />`
+                            ? `<img src="${escapeHtml(ticket.qrCodeBase64)}" alt="QR Code" />`
                             : '<p style="color:#94a3b8;font-size:12px;">Ticket details unavailable.</p>'}
                         </div>
                         <div class="ticket-info">
-                            <p><strong>Attendee:</strong> ${ticket.name}</p>
-                            <p><strong>Email:</strong> ${ticket.email}</p>
-                            <p><strong>Event:</strong> ${ticket.eventLocation ? ticket.eventLocation : (ticket.eventIsOnline ? 'Online Event' : 'TBA')}</p>
-                            <p><strong>Status:</strong> <span class="status-badge">${ticket.status || REGISTRATION_STATUS.CONFIRMED}</span></p>
+                            <p><strong>Attendee:</strong> ${escapeHtml(ticket.name)}</p>
+                            <p><strong>Email:</strong> ${escapeHtml(ticket.email)}</p>
+                            <p><strong>Event:</strong> ${escapeHtml(getLocationLabel(ticket))}</p>
+                            <p><strong>Status:</strong> <span class="status-badge">${escapeHtml(ticket.status || REGISTRATION_STATUS.CONFIRMED)}</span></p>
                             <p><strong>Ticket ID:</strong></p>
-                            <p class="ticket-id">${ticket.ticketUuid || 'N/A'}</p>
+                            <p class="ticket-id">${escapeHtml(ticket.ticketUuid || 'N/A')}</p>
                             ${ticket.amount && ticket.amount > 0
-                            ? `<p><strong>Paid:</strong> ₹${ticket.amount}${ticket.invoiceNo ? ' · Invoice: ' + ticket.invoiceNo : ''}</p>`
+                            ? `<p><strong>Paid:</strong> ₹${escapeHtml(ticket.amount)}${ticket.invoiceNo ? ' · Invoice: ' + escapeHtml(ticket.invoiceNo) : ''}</p>`
                             : '<p><strong>Paid:</strong> Free</p>'}
                         </div>
                     </div>
@@ -122,8 +154,8 @@ const MyTickets = () => {
             <h1 className="mt-title">My Tickets</h1>
             <p className="mt-subtitle">All your confirmed registrations, ready for check-in.</p>
 
-            {error && <div className="alert-error">{error}</div>}
-            {success && <div className="alert-success">{success}</div>}
+            {error && <div className="alert-error" role="alert">{error}</div>}
+            {success && <div className="alert-success" role="status">{success}</div>}
 
             {sortedTickets.length === 0 ? (
                 <div className="mt-empty">
@@ -164,7 +196,7 @@ const MyTickets = () => {
                                         <p className="mt-row"><strong>Attendee:</strong> {ticket.name}</p>
                                         <p className="mt-row"><strong>Email:</strong> {ticket.email}</p>
                                         <p className="mt-row">
-                                            <strong>Location:</strong> {ticket.eventIsOnline ? 'Online Event' : (ticket.eventLocation || 'TBA')}
+                                            <strong>Location:</strong> {getLocationLabel(ticket)}
                                         </p>
                                         <p className="mt-row">
                                             <strong>Status:</strong>{' '}
@@ -206,14 +238,14 @@ const MyTickets = () => {
                                 </div>
 
                                 <div className="mt-footer">
-                                    <button onClick={() => handlePrint(ticket)} className="mt-btn-print">
+                                    <button type="button" onClick={() => handlePrint(ticket)} className="mt-btn-print">
                                         Print / Save PDF
                                     </button>
                                     <Link to={buildEventDetailPath(ticket.eventId)} className="btn btn-small btn-secondary mt-btn-view">
                                         View Event
                                     </Link>
                                     {ticket.status !== REGISTRATION_STATUS.CHECKED_IN && (
-                                        <button onClick={() => handleCancel(ticket)} className="mt-btn-cancel">
+                                        <button type="button" onClick={() => handleCancel(ticket)} className="mt-btn-cancel">
                                             Cancel Registration
                                         </button>
                                     )}
@@ -223,6 +255,8 @@ const MyTickets = () => {
                     })}
                 </div>
             )}
+
+            <Pagination page={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
         </div>
     );
 };

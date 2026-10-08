@@ -28,4 +28,28 @@ public class AuthController {
     public ResponseEntity<AuthModels.AuthenticationResponse> authenticate(@Valid @RequestBody AuthModels.AuthenticationRequest request) {
         return ResponseEntity.ok(service.authenticate(request));
     }
+
+    /**
+     * Exchanges a refresh token for a fresh pair. Public by necessity -- the
+     * access token has expired, so the caller cannot authenticate -- which is
+     * safe because the refresh token itself is the credential and is checked
+     * against the server-side record.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthModels.AuthenticationResponse> refresh(@Valid @RequestBody AuthModels.RefreshRequest request) {
+        return ResponseEntity.ok(service.refresh(request));
+    }
+
+    /**
+     * Ends a session. Always answers 204, even for an unknown or already-revoked
+     * token: the client's intent ("this session is over") is satisfied either
+     * way, and reporting failure would leak whether a token was ever valid.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody(required = false) AuthModels.LogoutRequest request,
+                                       java.security.Principal principal) {
+        String refreshToken = request == null ? null : request.getRefreshToken();
+        service.logout(refreshToken, principal == null ? null : principal.getName());
+        return ResponseEntity.noContent().build();
+    }
 }

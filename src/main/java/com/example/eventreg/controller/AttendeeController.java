@@ -11,9 +11,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority; // Added import for GrantedAuthority
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * CORS is configured once in SecurityConfig's CorsConfigurationSource.
+ */
 @RestController
 @RequestMapping("/api")
-@CrossOrigin("*")
 public class AttendeeController {
 
     @Autowired
@@ -55,9 +57,18 @@ public class AttendeeController {
         }
     }
 
+    /**
+     * Reads a single registration. Same authorization rule as deleteAttendee --
+     * without it, any authenticated user could read any attendee's name, email,
+     * mobile, ticket UUID and QR image just by iterating ids.
+     */
     @GetMapping("/attendees/{id}")
-    public ResponseEntity<Attendee> getAttendeeById(@PathVariable Long id) {
+    public ResponseEntity<Attendee> getAttendeeById(@PathVariable Long id,
+                                                    java.security.Principal principal) {
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
         Attendee attendee = attendeeService.getAttendeeById(id);
+        attendeeService.assertCanManageAttendee(id, callerRole(), principal.getName(), callerUserId(principal));
         return ResponseEntity.ok(attendee);
     }
 

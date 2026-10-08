@@ -6,10 +6,20 @@ import { Link } from 'react-router-dom';
 import { getUserRole } from '../services/authService';
 import {
     APP_ROUTES,
+    APPROVAL_STATUS,
+    ERROR_MESSAGES,
     PAGINATION,
     ROLES,
     buildEventDetailPath
 } from '../constants';
+import { getErrorMessage } from '../utils/errors';
+
+/**
+ * Rows shown in "Latest Opportunities". Kept small so the dashboard fits a
+ * single screen without the page scrolling; the list scrolls inside its card
+ * if it ever needs to hold more.
+ */
+const DASHBOARD_OPPORTUNITY_COUNT = 4;
 
 const HERO = {
     [ROLES.ADMIN]: {
@@ -30,9 +40,13 @@ const Dashboard = () => {
     const [totalEvents, setTotalEvents] = useState(0);
     const [recentEvents, setRecentEvents] = useState([]);
 
-    // New states for Admin & Host specific metrics
+    // Admin & Host specific metrics
     const [adminStats, setAdminStats] = useState({ ended: 0, pending: 0 });
     const [hostStats, setHostStats] = useState({ hosted: 0, pending: 0 });
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(true);
+    // Null means "no server count available", so the local page count is used.
+    const [activeEventTotal, setActiveEventTotal] = useState(null);
 
     const userRole = getUserRole();
     const isAdmin = userRole === ROLES.ADMIN;
@@ -53,32 +67,48 @@ const Dashboard = () => {
             requests.push(getMyEvents(PAGINATION.DEFAULT_PAGE, PAGINATION.LARGE_PAGE_SIZE));
         }
 
-        Promise.all(requests)
-            .then((responses) => {
-                const [eventsRes, regRes, extraRes] = responses;
-                const allEvents = eventsRes.data.content || [];
+        // allSettled, not all: one failing request (e.g. the role-specific call)
+        // used to discard every other metric and leave the page showing zeros
+        // plus "No events currently scheduled" with no indication anything broke.
+        Promise.allSettled(requests)
+            .then((results) => {
+                const eventsRes = results[0];
+                const regRes = results[1];
+                const extraRes = results[2];
+
+                if (eventsRes.status === 'rejected') {
+                    setError(getErrorMessage(eventsRes.reason, ERROR_MESSAGES.LOAD_EVENTS_FAILED));
+                    return;
+                }
+                setError('');
+
+                const allEvents = eventsRes.value.data.content || [];
 
                 // "Total Active Events" applies platform-wide: Only Approved AND Not Expired
                 const activeEvents = allEvents.filter(
-                    e => (!e.approvalStatus || e.approvalStatus === 'APPROVED') && !e.expired
+                    e => (!e.approvalStatus || e.approvalStatus === APPROVAL_STATUS.APPROVED) && !e.expired
                 );
                 setTotalEvents(activeEvents.length);
+                // For non-admins the server already filters expired events out
+                // (EventController passes includeExpired=false), so its total
+                // counts exactly the active events. For admins that flag is true
+                // and the total would include ended events, so keep the local count.
+                setActiveEventTotal(
+                    isAdmin ? null : (eventsRes.value.data.totalElements ?? activeEvents.length)
+                );
 
-                // --- Admin Metrics Calculations ---
                 if (isAdmin) {
                     const endedEventsCount = allEvents.filter(e => e.expired).length;
-                    const pendingApprovalsCount = extraRes?.data?.events || 0;
+                    const pendingApprovalsCount = extraRes?.status === 'fulfilled' ? (extraRes.value.data?.events || 0) : 0;
 
                     setAdminStats({
                         ended: endedEventsCount,
                         pending: pendingApprovalsCount
                     });
-                }
-                // --- Host Metrics Calculations ---
-                else if (isHost) {
-                    const myEvents = extraRes?.data?.content || [];
-                    const myHostedCount = myEvents.filter(e => !e.approvalStatus || e.approvalStatus === 'APPROVED').length;
-                    const myPendingCount = myEvents.filter(e => e.approvalStatus === 'PENDING').length;
+                } else if (isHost) {
+                    const myEvents = extraRes?.status === 'fulfilled' ? (extraRes.value.data?.content || []) : [];
+                    const myHostedCount = myEvents.filter(e => !e.approvalStatus || e.approvalStatus === APPROVAL_STATUS.APPROVED).length;
+                    const myPendingCount = myEvents.filter(e => e.approvalStatus === APPROVAL_STATUS.PENDING).length;
 
                     setHostStats({
                         hosted: myHostedCount,
@@ -86,20 +116,29 @@ const Dashboard = () => {
                     });
                 }
 
-                const registeredIds = new Set((regRes.data || []).map(r => r.eventId));
+                const registeredIds = new Set(
+                    (regRes?.status === 'fulfilled' ? (regRes.value.data || []) : []).map(r => r.eventId)
+                );
 
                 const opportunities = activeEvents
                     .filter(e => !registeredIds.has(e.id))
                     .sort((a, b) => b.id - a.id)
-                    .slice(0, 4);
+                    .slice(0, DASHBOARD_OPPORTUNITY_COUNT);
 
                 setRecentEvents(opportunities);
             })
-            .catch(error => console.error("Error fetching dashboard data:", error));
+            .catch((error) => {
+                setError(getErrorMessage(error, ERROR_MESSAGES.LOAD_EVENTS_FAILED));
+            })
+            .finally(() => setLoading(false));
     }, [isAdmin, isHost]);
+
+    if (loading) return <div className="page-loading">Loading your dashboard...</div>;
 
     return (
         <div className="dl-wrap">
+            {error && <div className="alert-error" role="alert">{error}</div>}
+
             <div className="dl-hero">
                 <h1 className="dl-h1">
                     {hero.title}
@@ -110,63 +149,64 @@ const Dashboard = () => {
             </div>
 
             <div className="dl-metric-col">
-                {/* Flex container to place cards in the same row seamlessly */}
-                <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '30px', width: '100%' }}>
-
-                    {/* Universal Card */}
-                    <div className="dl-metric" style={{ marginBottom: 0, flex: 1, minWidth: '220px', padding: '30px 20px' }}>
-                        <h3 className="dl-metric-label">
-                            Total Active Events
-                        </h3>
-                        <h2 className="dl-metric-value">
-                            {totalEvents}
-                        </h2>
+                {/* Hero metric: full width so the headline number reads as the
+                    primary figure, with the role-specific pair compact below. */}
+                <div className="dl-metric-hero">
+                    <h3 className="dl-metric-label">
+                        Total Active Events
+                    </h3>
+                    <div className="dl-metric-hero-value">
+                        {activeEventTotal ?? totalEvents}
                     </div>
+                </div>
 
-                    {/* Admin-Only Cards */}
+                {/* Attendees have no role metrics, so the row is omitted rather
+                    than rendered as an empty strip of space. */}
+                {(isAdmin || isHost) && (
+                <div className="dl-metric-row">
                     {isAdmin && (
                         <>
-                            <div className="dl-metric" style={{ marginBottom: 0, flex: 1, minWidth: '220px', padding: '30px 20px' }}>
+                            <div className="dl-metric dl-metric-sm">
                                 <h3 className="dl-metric-label">
                                     Ended Events
                                 </h3>
-                                <h2 className="dl-metric-value" style={{ color: '#64748B' }}>
+                                <div className="dl-metric-value dl-metric-value-sm dl-muted-value">
                                     {adminStats.ended}
-                                </h2>
+                                </div>
                             </div>
-                            <div className="dl-metric" style={{ marginBottom: 0, flex: 1, minWidth: '220px', padding: '30px 20px' }}>
+                            <div className="dl-metric dl-metric-sm">
                                 <h3 className="dl-metric-label">
                                     Approval Pending
                                 </h3>
-                                <h2 className="dl-metric-value" style={{ color: '#D97706' }}>
+                                <div className="dl-metric-value dl-metric-value-sm dl-warn-value">
                                     {adminStats.pending}
-                                </h2>
+                                </div>
                             </div>
                         </>
                     )}
 
-                    {/* Host-Only Cards */}
                     {isHost && (
                         <>
-                            <div className="dl-metric" style={{ marginBottom: 0, flex: 1, minWidth: '220px', padding: '30px 20px' }}>
+                            <div className="dl-metric dl-metric-sm">
                                 <h3 className="dl-metric-label">
                                     My Hosted Events
                                 </h3>
-                                <h2 className="dl-metric-value" style={{ color: '#10B981' }}>
+                                <div className="dl-metric-value dl-metric-value-sm dl-ok-value">
                                     {hostStats.hosted}
-                                </h2>
+                                </div>
                             </div>
-                            <div className="dl-metric" style={{ marginBottom: 0, flex: 1, minWidth: '220px', padding: '30px 20px' }}>
+                            <div className="dl-metric dl-metric-sm">
                                 <h3 className="dl-metric-label">
                                     Pending Requests
                                 </h3>
-                                <h2 className="dl-metric-value" style={{ color: '#D97706' }}>
+                                <div className="dl-metric-value dl-metric-value-sm dl-warn-value">
                                     {hostStats.pending}
-                                </h2>
+                                </div>
                             </div>
                         </>
                     )}
                 </div>
+                )}
 
                 <div className="dl-cta-row">
                     <Link to={APP_ROUTES.EVENTS} className="dl-btn-outline">

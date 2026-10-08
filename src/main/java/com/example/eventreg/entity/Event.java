@@ -45,6 +45,7 @@ public class Event {
     @NotNull(message = "Category is required")
     private Category category;
 
+
     @Column(name = "location")
     private String location;
 
@@ -54,6 +55,7 @@ public class Event {
     @Column(name = "duration")
     private String duration;
 
+    @NotNull(message = "Price is required")
     @Column(name = "price")
     private Double price;
 

@@ -12,17 +12,6 @@ const FOCUSABLE = [
     '[tabindex]:not([tabindex="-1"])'
 ].join(', ');
 
-/**
- * Yes/no confirmation dialog, rendered into a portal so ancestor overflow
- * (.dl-scroll, .el-* all set it) can't clip it.
- *
- * A native window.confirm gives you focus trapping, Escape and screen-reader
- * semantics for free. This rebuilds all of that deliberately -- without it
- * the replacement would be a regression, not an upgrade.
- *
- * Tone drives severity: 'danger' adds the red accent and a destructive
- * confirm button. Callers own the wording (see PROMPTS); this only renders it.
- */
 const ConfirmDialog = ({ request, onSettle }) => {
     const dialogRef = useRef(null);
 

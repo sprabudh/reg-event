@@ -8,9 +8,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * CORS is configured once in SecurityConfig's CorsConfigurationSource.
+ */
 @RestController
 @RequestMapping("/api")
-@CrossOrigin("*")
 public class PaymentController {
 
     @Autowired

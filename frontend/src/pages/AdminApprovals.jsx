@@ -3,27 +3,49 @@ import { Link } from 'react-router-dom';
 import { getPendingEvents, approveEvent, rejectEvent } from '../services/hostService';
 import { useConfirm } from '../hooks/useConfirm';
 import useFlash from '../hooks/useFlash';
-import { APP_ROUTES, buildEventDetailPath, getApprovalBadgeClass } from '../constants';
+import Pagination from '../components/ui/Pagination';
+import {
+    APP_ROUTES,
+    APPROVAL_STATUS,
+    PAGINATION,
+    REJECTION_REASON_ADMIN,
+    buildEventDetailPath,
+    getApprovalBadgeClass
+} from '../constants';
 import { getErrorMessage } from '../utils/errors';
+import { formatHostName } from '../utils/format';
 
 const AdminApprovals = () => {
     const [events, setEvents] = useState([]);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [success, flash] = useFlash();
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    // Server-side total, not events.length -- the count shown in the heading
+    // used to describe only the current page.
+    const [totalElements, setTotalElements] = useState(0);
+    // Ids with an approve/reject in flight, so a double click cannot fire twice.
+    const [busyIds, setBusyIds] = useState([]);
     const confirm = useConfirm();
 
     const load = useCallback(() => {
-        getPendingEvents('PENDING')
+        getPendingEvents(APPROVAL_STATUS.PENDING, currentPage, PAGINATION.EVENTS_PAGE_SIZE)
             .then((res) => {
                 setEvents(res.data.content || []);
+                setTotalPages(res.data.totalPages || 0);
+                setTotalElements(res.data.totalElements ?? (res.data.content || []).length);
                 setError('');
             })
             .catch((err) => setError(getErrorMessage(err, 'Failed to load the approval queue.')))
             .finally(() => setLoading(false));
-    }, []);
+    }, [currentPage]);
 
     useEffect(() => { load(); }, [load]);
+
+    const markBusy = (id, busy) => {
+        setBusyIds((prev) => (busy ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)));
+    };
 
     const handleApproveEvent = async (id) => {
         const ok = await confirm({
@@ -32,9 +54,11 @@ const AdminApprovals = () => {
         });
         if (!ok) return;
 
+        markBusy(id, true);
         approveEvent(id)
             .then(() => { flash('Event approved and published.'); load(); })
-            .catch((err) => setError(getErrorMessage(err, 'Failed to approve event.')));
+            .catch((err) => setError(getErrorMessage(err, 'Failed to approve event.')))
+            .finally(() => markBusy(id, false));
     };
 
     const handleRejectEvent = async (id, name) => {
@@ -45,9 +69,11 @@ const AdminApprovals = () => {
         });
         if (!ok) return;
 
-        rejectEvent(id, 'Rejected by admin')
+        markBusy(id, true);
+        rejectEvent(id, REJECTION_REASON_ADMIN)
             .then(() => { flash('Event rejected.'); load(); })
-            .catch((err) => setError(getErrorMessage(err, 'Failed to reject event.')));
+            .catch((err) => setError(getErrorMessage(err, 'Failed to reject event.')))
+            .finally(() => markBusy(id, false));
     };
 
     if (loading) return <div className="page-loading">Loading approvals...</div>;
@@ -59,11 +85,11 @@ const AdminApprovals = () => {
                 <Link to={APP_ROUTES.EVENTS} className="btn btn-secondary">All Events</Link>
             </div>
 
-            {error && <div className="el-error">{error}</div>}
-            {success && <div className="alert-success">{success}</div>}
+            {error && <div className="el-error" role="alert">{error}</div>}
+            {success && <div className="alert-success" role="status">{success}</div>}
 
             <h3 className="el-title" style={{ marginTop: 24 }}>
-                Event requests ({events.length})
+                Event requests ({totalElements})
             </h3>
             {events.length === 0 ? (
                 <div className="el-empty">No events awaiting review.</div>
@@ -79,7 +105,7 @@ const AdminApprovals = () => {
                             </h3>
                             <div className="el-details">
                                 <p className="el-row">
-                                    <strong>Hosted By:</strong> <span>{event.hostName || 'Unknown'}</span>
+                                    <strong>Hosted By:</strong> <span>{formatHostName(event.hostName, 'Unknown')}</span>
                                 </p>
                                 <p className="el-row">
                                     <strong>Category:</strong> <span>{event.category ? event.category.name : 'N/A'}</span>
@@ -92,13 +118,23 @@ const AdminApprovals = () => {
                                 </p>
                             </div>
                             <div className="el-actions">
-                                <Link to={buildEventDetailPath(event.id)} className="el-btn-edit">
+                                <Link to={buildEventDetailPath(event.id)} className="el-btn-act el-bg-book">
                                     View
                                 </Link>
-                                <button onClick={() => handleApproveEvent(event.id)} className="el-btn-act el-bg-book">
+                                <button
+                                    type="button"
+                                    onClick={() => handleApproveEvent(event.id)}
+                                    disabled={busyIds.includes(event.id)}
+                                    className="el-btn-act el-bg-book"
+                                >
                                     Approve
                                 </button>
-                                <button onClick={() => handleRejectEvent(event.id, event.name)} className="el-btn-del">
+                                <button
+                                    type="button"
+                                    onClick={() => handleRejectEvent(event.id, event.name)}
+                                    disabled={busyIds.includes(event.id)}
+                                    className="el-btn-del"
+                                >
                                     Reject
                                 </button>
                             </div>
@@ -106,6 +142,8 @@ const AdminApprovals = () => {
                     ))}
                 </div>
             )}
+
+            <Pagination page={currentPage} totalPages={totalPages} onChange={setCurrentPage} />
         </div>
     );
 };

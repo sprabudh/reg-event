@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getEventById, getEventStats } from '../services/eventService';
 import { getAttendeesByEvent, registerAttendee, deleteAttendee, checkInAttendee, getEventPayments } from '../services/attendeeService';
 import { approveEvent, rejectEvent } from '../services/hostService';
 import { getUserRole } from '../services/authService';
 import Field from '../components/ui/Field';
+import Pagination from '../components/ui/Pagination';
 import EventInfoGrid from '../components/event/EventInfoGrid';
 import EventStats from '../components/event/EventStats';
 import AttendeesTable from '../components/event/AttendeesTable';
@@ -20,6 +21,7 @@ import {
     PAGINATION,
     PROMPTS,
     REGISTRATION_STATUS,
+    REGEX,
     ROLES,
     SUCCESS_MESSAGES,
     buildEditAttendeePath,
@@ -43,53 +45,80 @@ const EventDetails = () => {
     const [registerSuccess, setRegisterSuccess] = useState('');
     const [actionError, setActionError] = useState('');
     const [actionSuccess, setActionSuccess] = useState('');
+    const [loadError, setLoadError] = useState('');
+    // stats starts at EMPTY_EVENT_STATS (available: 0), so before/without stats
+    // the button would read "Join Waitlist" even for an empty event.
+    const [statsLoaded, setStatsLoaded] = useState(false);
+    const [isRegistering, setIsRegistering] = useState(false);
 
     const [formData, setFormData] = useState({ name: '', email: '', mobileNumber: '' });
     const [searchTerm, setSearchTerm] = useState('');
     const [payments, setPayments] = useState([]);
+    // The attendees endpoint is paged; without a pager the table silently showed
+    // only the first LARGE_PAGE_SIZE rows of a larger event.
+    const [attendeePage, setAttendeePage] = useState(0);
+    const [attendeeTotalPages, setAttendeeTotalPages] = useState(0);
+    const [busyAttendeeIds, setBusyAttendeeIds] = useState([]);
 
     const userRole = getUserRole();
     const isAdmin = userRole === ROLES.ADMIN;
     const confirm = useConfirm();
 
-    const loadEventDetails = () => {
-        getEventById(id).then(res => setEvent(res.data)).catch(err => console.error(err));
-    };
+    // useCallback so the effect below can depend on them honestly. Without it the
+// loader identities change every render, and the effect either loops or has to
+// suppress the dependency.
+const loadEventDetails = useCallback(() => {
+        // A failed load leaves event === null, so without this the page would sit
+        // on "Loading..." forever with no way out.
+        getEventById(id)
+            .then(res => { setEvent(res.data); setLoadError(''); })
+            .catch(err => setLoadError(getErrorMessage(err, ERROR_MESSAGES.LOAD_EVENT_DETAILS_FAILED)));
+    }, [id]);
 
-    const loadEventStats = () => {
-        getEventStats(id).then(res => setStats(res.data)).catch(err => console.error(err));
-    };
-
-    const loadAttendees = () => {
-        getAttendeesByEvent(id, PAGINATION.DEFAULT_PAGE, PAGINATION.LARGE_PAGE_SIZE)
-            .then(res => setAttendees(res.data.content))
+    const loadEventStats = useCallback(() => {
+        getEventStats(id)
+            .then(res => { setStats(res.data); setStatsLoaded(true); })
             .catch(err => console.error(err));
-    };
+    }, [id]);
 
-    const loadPayments = () => {
+    const loadAttendees = useCallback(() => {
+        getAttendeesByEvent(id, attendeePage, PAGINATION.ATTENDEES_PAGE_SIZE)
+            .then(res => {
+                setAttendees(res.data.content || []);
+                setAttendeeTotalPages(res.data.totalPages || 0);
+            })
+            .catch(err => console.error(err));
+    }, [id, attendeePage]);
+
+    const loadPayments = useCallback(() => {
         if (!isAdmin) return;
         getEventPayments(id).then(res => setPayments(res.data)).catch(err => console.error(err));
-    };
+    }, [id, isAdmin]);
 
-    const reloadAttendeeData = () => {
+    const reloadAttendeeData = useCallback(() => {
         loadAttendees();
         loadEventStats();
         loadPayments();
-    };
+    }, [loadAttendees, loadEventStats, loadPayments]);
 
-    const reloadAll = () => {
+    const reloadAll = useCallback(() => {
         loadEventDetails();
         reloadAttendeeData();
-    };
+    }, [loadEventDetails, reloadAttendeeData]);
 
     useEffect(() => {
         reloadAll();
-    }, [id]);
+    }, [reloadAll]);
 
-    const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+    const handleInputChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+        // Clear a stale validation error as soon as the user starts fixing it.
+        if (registerError) setRegisterError('');
+    };
 
     const handleRegister = (e) => {
         e.preventDefault();
+        if (isRegistering) return;
         setRegisterError('');
         setRegisterSuccess('');
         setActionError('');
@@ -116,13 +145,13 @@ const EventDetails = () => {
             return;
         }
 
-        // Simple standard email format check
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(formData.email)) {
-            setRegisterError('Please enter a valid email address.');
+        // Shared regex so "valid email" has a single definition
+        if (!REGEX.EMAIL.test(formData.email)) {
+            setRegisterError(ERROR_MESSAGES.EMAIL_FORMAT);
             return;
         }
 
+        setIsRegistering(true);
         registerAttendee(id, formData)
             .then((res) => {
                 if (res.data && res.data.status === REGISTRATION_STATUS.WAITLISTED) {
@@ -135,7 +164,8 @@ const EventDetails = () => {
             })
             .catch((err) => {
                 setRegisterError(getErrorMessage(err, ERROR_MESSAGES.ATTENDEE_REGISTRATION_FAILED));
-            });
+            })
+            .finally(() => setIsRegistering(false));
     };
 
     const handleApprove = async () => {
@@ -170,6 +200,10 @@ const EventDetails = () => {
             .catch((err) => setActionError(getErrorMessage(err, 'Failed to reject event.')));
     };
 
+    const markAttendeeBusy = (attendeeId, busy) => {
+        setBusyAttendeeIds((prev) => (busy ? [...new Set([...prev, attendeeId])] : prev.filter((x) => x !== attendeeId)));
+    };
+
     const handleDeleteAttendee = async (attendeeId) => {
         setActionError('');
         setActionSuccess('');
@@ -190,10 +224,14 @@ const EventDetails = () => {
         });
         if (!confirmed) return;
 
-        deleteAttendee(attendeeId).then(() => {
-            reloadAll();
-            setActionSuccess(SUCCESS_MESSAGES.REGISTRATION_REMOVED);
-        }).catch((err) => setActionError(getErrorMessage(err, 'Failed to cancel registration.')));
+        markAttendeeBusy(attendeeId, true);
+        deleteAttendee(attendeeId)
+            .then(() => {
+                reloadAll();
+                setActionSuccess(SUCCESS_MESSAGES.REGISTRATION_REMOVED);
+            })
+            .catch((err) => setActionError(getErrorMessage(err, ERROR_MESSAGES.CANCEL_REGISTRATION_FAILED)))
+            .finally(() => markAttendeeBusy(attendeeId, false));
     };
 
     const handleCheckIn = (attendee) => {
@@ -205,15 +243,30 @@ const EventDetails = () => {
             return;
         }
 
+        markAttendeeBusy(attendee.id, true);
         checkInAttendee(id, attendee.ticketUuid)
             .then(() => {
                 setActionSuccess(SUCCESS_MESSAGES.CHECK_IN_OK(attendee.name));
                 reloadAttendeeData();
             })
-            .catch(err => setActionError(getErrorMessage(err, ERROR_MESSAGES.CHECK_IN_FAILED)));
+            .catch(err => setActionError(getErrorMessage(err, ERROR_MESSAGES.CHECK_IN_FAILED)))
+            .finally(() => markAttendeeBusy(attendee.id, false));
     };
 
-    if (!event) return <div className="ed-loading">Loading...</div>;
+    if (!event) {
+        if (loadError) {
+            return (
+                <div>
+                    <Link to={APP_ROUTES.EVENTS} className="ed-back-link">&larr; Back to Events</Link>
+                    <div className="card ed-event-card">
+                        <div className="ed-error" role="alert">{loadError}</div>
+                        <button type="button" className="btn btn-secondary" onClick={loadEventDetails}>Try Again</button>
+                    </div>
+                </div>
+            );
+        }
+        return <div className="ed-loading">Loading...</div>;
+    }
 
     const expired = event.expired;
     const isPending = event.approvalStatus === 'PENDING';
@@ -222,7 +275,10 @@ const EventDetails = () => {
     const paymentByAttendee = indexPaymentsByAttendee(payments);
     const cancelledPayments = selectCancelledPayments(payments);
 
-    const alreadyRegistered = !isAdmin && attendees.length > 0;
+    // Admins manage registrations from the table below; they should never be able
+// to register themselves for an event from the admin view.
+const alreadyRegistered = !isAdmin && attendees.length > 0;
+const canRegister = !isAdmin && !alreadyRegistered;
 
     const sortedAttendees = filterAndSortAttendees(attendees, searchTerm);
 
@@ -272,6 +328,12 @@ const EventDetails = () => {
             <div className="ed-main-row">
                 {isPending || isRejected ? (
                     <div className="ed-panel">
+                        {/* Approve/Reject live only in this branch, so their
+                            feedback has to render here too — otherwise a failed
+                            approval is silently swallowed. */}
+                        {actionError && <div className="ed-error" role="alert">{actionError}</div>}
+                        {actionSuccess && <div className="ed-success" role="status">{actionSuccess}</div>}
+
                         <h3 className="ed-panel-title">
                             {isPending ? 'Pending Admin Approval' : 'Event Rejected'}
                         </h3>
@@ -290,12 +352,9 @@ const EventDetails = () => {
                     </div>
                 ) : (
                     <>
-                        {!alreadyRegistered && (
+                        {canRegister && (
                             <div className="card ed-register-card">
                                 <h3 className="ed-register-title">Register</h3>
-
-                                {registerError && <div className="ed-error">{registerError}</div>}
-                                {registerSuccess && <div className="ed-success">{registerSuccess}</div>}
 
                                 <form onSubmit={handleRegister} className="ed-form" noValidate>
                                     <Field variant="ed" label={FORM_LABELS.FULL_NAME} name="name" value={formData.name} onChange={handleInputChange} />
@@ -304,18 +363,35 @@ const EventDetails = () => {
 
                                     <Field variant="ed" label={FORM_LABELS.EMAIL} type="email" name="email" value={formData.email} onChange={handleInputChange} />
 
-                                    <button type="submit" className={stats.available === 0 ? 'btn ed-btn-waitlist' : 'btn ed-btn-register'}>
-                                        {stats.available > 0 ? 'Register Now' : 'Join Waitlist'}
+                                    <button
+                                        type="submit"
+                                        disabled={isRegistering}
+                                        className={statsLoaded && stats.available === 0 ? 'btn ed-btn-waitlist' : 'btn ed-btn-register'}
+                                    >
+                                        {isRegistering
+                                            ? 'Registering...'
+                                            : statsLoaded && stats.available > 0
+                                                ? 'Register Now'
+                                                : statsLoaded
+                                                    ? 'Join Waitlist'
+                                                    : 'Checking availability...'}
                                     </button>
                                 </form>
                             </div>
                         )}
 
                         <div className="ed-main-col">
+                            {/* Registration feedback lives here rather than inside
+                                the register card: a successful registration makes
+                                alreadyRegistered true, which unmounts that card and
+                                would take its own success banner with it. */}
+                            {registerError && <div className="ed-error" role="alert">{registerError}</div>}
+                            {registerSuccess && <div className="ed-success" role="status">{registerSuccess}</div>}
+
                             {isAdmin ? (
                                 <>
-                                    {actionError && <div className="ed-error">{actionError}</div>}
-                                    {actionSuccess && <div className="ed-success">{actionSuccess}</div>}
+                                    {actionError && <div className="ed-error" role="alert">{actionError}</div>}
+                                    {actionSuccess && <div className="ed-success" role="status">{actionSuccess}</div>}
 
                                     <AttendeesTable
                                         title="All Attendees (Admin View)"
@@ -326,14 +402,21 @@ const EventDetails = () => {
                                         paymentByAttendee={paymentByAttendee}
                                         onCheckIn={handleCheckIn}
                                         onDelete={(a) => handleDeleteAttendee(a.id)}
+                                        busyIds={busyAttendeeIds}
+                                    />
+
+                                    <Pagination
+                                        page={attendeePage}
+                                        totalPages={attendeeTotalPages}
+                                        onChange={setAttendeePage}
                                     />
 
                                     <RefundsTable cancelledPayments={cancelledPayments} />
                                 </>
                             ) : (
                                 <div className="ed-box">
-                                    {actionError && <div className="ed-error">{actionError}</div>}
-                                    {actionSuccess && <div className="ed-success">{actionSuccess}</div>}
+                                    {actionError && <div className="ed-error" role="alert">{actionError}</div>}
+                                    {actionSuccess && <div className="ed-success" role="status">{actionSuccess}</div>}
 
                                     <h3 className="ed-h3-dark">My Registration Status</h3>
                                     {attendees.length > 0 ? (

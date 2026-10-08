@@ -27,16 +27,7 @@ const passwordField = () => z
         }
     });
 
-/**
- * Login does NOT apply the password policy. The backend's
- * AuthenticationRequest validates email format but not password strength,
- * and blocking sign-in for a password that predates the current policy
- * would lock those users out with a misleading error.
- *
- * accountType is what separates the two doors: a host signing in through the
- * attendee option is rejected server-side, and vice versa. ADMIN is exempt
- * there, so admins can use either option.
- */
+
 export const loginSchema = z.object({
     email: emailField(),
     password: z.string().min(1, 'Password is required'),
@@ -76,4 +67,12 @@ export const registerSchema = z
         }
     });
 
-export const adminRegisterSchema = registerSchema;
+/**
+ * Admin setup shares the password/confirm rules but not the host-domain check,
+ * and must never be constrained by HOST_EMAIL_SUFFIX. Written out explicitly
+ * rather than aliased to registerSchema so an attendee-only rule added to the
+ * registration schema later cannot silently start applying to admin creation.
+ */
+export const adminRegisterSchema = z
+    .object(registerShape)
+    .refine((values) => values.password === values.confirmPassword, confirmMatches);

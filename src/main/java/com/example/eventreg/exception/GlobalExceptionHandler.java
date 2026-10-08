@@ -1,13 +1,17 @@
 package com.example.eventreg.exception;
 
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -62,6 +66,14 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT);
     }
 
+    // 3c-6. The refresh token is unknown, expired, rotated or revoked. 401 so the
+    // client interceptor knows the session is over and can send the user to the
+    // login screen, rather than retrying the refresh indefinitely.
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
     // 3c-5. Bad input we reject ourselves (blank category name, duplicate
     // pending category request, ...). These are caller errors, not server
     // faults -- without this they hit the catch-all below and report 500.
@@ -95,10 +107,36 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    // 5. Catches all other unexpected server errors (500)
+    // 4b. Malformed request bodies (bad JSON, unparseable date/type) and bad path
+    // or query params. These are caller errors; the catch-all below reported them
+    // as 500, which hid the real cause and stopped the frontend's field-error
+    // handling from ever finding data.errors.
+    @ExceptionHandler({
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class,
+            ConstraintViolationException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleBadRequest(Exception ex) {
+        return buildErrorResponse("Invalid request.", HttpStatus.BAD_REQUEST);
+    }
+
+    // 4c. Business-rule violations raised from services (e.g. checking in an
+    // attendee who is already checked in). Returned as 400 instead of 500 so the
+    // message reaches the user, matching the admin check-in path.
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    // 5. Catches all other unexpected server errors (500). The exception message
+    // is logged, not returned: it can carry SQL, entity and internal class names.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGlobalException(Exception ex) {
-        return buildErrorResponse("An unexpected error occurred: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class)
+                .error("Unhandled exception", ex);
+        return buildErrorResponse("An unexpected error occurred. Please try again later.",
+                HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     // Helper method to build a clean JSON response

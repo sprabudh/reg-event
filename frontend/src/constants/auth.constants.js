@@ -8,6 +8,7 @@
 
 export const STORAGE_KEYS = {
     TOKEN: 'token',
+    REFRESH_TOKEN: 'refreshToken',
     ROLE: 'role',
     USER_NAME: 'userName'
 };
@@ -22,12 +23,7 @@ export const ROLES = {
     HOST: 'HOST'
 };
 
-/**
- * Which account type the Register page offers. Sent as `accountType` and
- * mapped to a role server-side by AuthService.resolveRegisterRole.
- * Kept distinct from ROLES because the wire value is a UI concept, not an
- * authority string.
- */
+
 export const ACCOUNT_TYPES = {
     ATTENDEE: 'ATTENDEE',
     HOST: 'HOST'

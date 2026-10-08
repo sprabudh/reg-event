@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { getUserName, getUserRole, isAuthenticated, logoutUser } from '../../services/authService';
 import { useConfirm } from '../../hooks/useConfirm';
+import { redirectTo } from '../../utils/navigation';
 import { APP_ROUTES, CONFIRM_LABELS, NAV_LABELS, PROMPTS, ROLE_BADGE_CLASSES, ROLE_LABELS, ROLES } from '../../constants';
 
 const Header = () => {
@@ -17,16 +18,18 @@ const Header = () => {
         });
         if (!confirmed) return;
 
-        logoutUser();
-        window.location.href = APP_ROUTES.LOGIN;
+        await logoutUser();
+        redirectTo(APP_ROUTES.LOGIN);
     };
 
     const navClass = ({ isActive }) => `nb-link${isActive ? ' active' : ''}`;
 
     return (
-        <nav className="nb-nav">
+        <nav className="nb-nav" aria-label="Main">
             <div className="nb-left">
-                <h2 className="nb-brand">{NAV_LABELS.BRAND}</h2>
+                {/* Not a heading: it is a link to the home page, and an <h2>
+                    with no <h1> above it produced a broken outline. */}
+                <NavLink to={APP_ROUTES.HOME} className="nb-brand">{NAV_LABELS.BRAND}</NavLink>
                 {loggedIn && (
                     <div className="nb-links">
                         <NavLink to={APP_ROUTES.HOME} end className={navClass}>
@@ -74,7 +77,7 @@ const Header = () => {
                         <span className="nb-greet">
                             {NAV_LABELS.GREETING(userName)}
                         </span>
-                        <button onClick={handleLogout} className="nb-logout">
+                        <button type="button" onClick={handleLogout} className="nb-logout">
                             {NAV_LABELS.LOGOUT}
                         </button>
                     </>

@@ -4,10 +4,16 @@ import { API_ENDPOINTS } from '../constants';
 const { EVENTS } = API_ENDPOINTS;
 
 export const getEvents = (page = 0, size = 10, name = '', categoryId = '') => {
-    let url = `${EVENTS.BASE}?page=${page}&size=${size}`;
-    if (name) url += `&name=${name}`;
-    if (categoryId) url += `&categoryId=${categoryId}`;
-    return api.get(url);
+    // Pass params rather than building the query string by hand: interpolating
+    // raw input lets a name containing `&`, `#` or `+` corrupt the query.
+    return api.get(EVENTS.BASE, {
+        params: {
+            page,
+            size,
+            ...(name ? { name } : {}),
+            ...(categoryId ? { categoryId } : {})
+        }
+    });
 };
 
 export const getEventById = (id) => {

@@ -17,8 +17,6 @@ export const APP_ROUTES = {
     EDIT_EVENT: '/edit-event/:id',
     EDIT_ATTENDEE: '/edit-attendee/:id',
     ADMIN_SETUP: '/admin-setup',
-    FORBIDDEN: '/forbidden',
-
     // Host role
     HOST_EVENTS: '/host/events',
     HOST_EVENT_DETAIL: '/host/events/:id',
@@ -33,3 +31,5 @@ export const APP_ROUTES = {
 export const buildEventDetailPath = (id) => `/events/${id}`;
 export const buildEditEventPath = (id) => `/edit-event/${id}`;
 export const buildEditAttendeePath = (id) => `/edit-attendee/${id}`;
+export const buildHostEventPath = (id) => `/host/events/${id}`;
+export const buildHostEditEventPath = (id) => `/host/events/${id}/edit`;

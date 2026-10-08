@@ -17,7 +17,12 @@ export const getRefundBadge = (refundStatus) => {
 
 /** Indexes a payments list by attendeeId for O(1) lookup in the attendee table. */
 export const indexPaymentsByAttendee = (payments) =>
-    Object.fromEntries(payments.map((p) => [p.attendeeId, p]));
+    Object.fromEntries(
+        payments
+            // Rows without an attendeeId would all collide under the "null" key.
+            .filter((p) => p.attendeeId !== null && p.attendeeId !== undefined)
+            .map((p) => [p.attendeeId, p])
+    );
 
 /** Payments that represent a cancelled registration (refunded, forfeited, or flagged cancelled). */
 export const selectCancelledPayments = (payments) =>

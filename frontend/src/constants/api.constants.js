@@ -9,7 +9,9 @@ export const API_ENDPOINTS = {
     AUTH: {
         LOGIN: '/auth/authenticate',
         REGISTER_USER: '/auth/register',
-        REGISTER_ADMIN: '/auth/register-admin'
+        REGISTER_ADMIN: '/auth/register-admin',
+        REFRESH: '/auth/refresh',
+        LOGOUT: '/auth/logout'
     },
     EVENTS: {
         BASE: '/events',
@@ -30,14 +32,7 @@ export const API_ENDPOINTS = {
         BY_ID: (id) => `/attendees/${id}`
     },
 
-    /**
-     * Host role. Every path here sits under /api/host/**, which SecurityConfig
-     * restricts to hasAuthority("HOST") -- the UI never decides this.
-     *
-     * There is deliberately no category-request endpoint: categories are
-     * admin-owned, and a host picks the best fit (or "Other") from the same
-     * GET /api/categories list everyone uses.
-     */
+
     HOST: {
         EVENTS: '/host/events',
         EVENT_BY_ID: (id) => `/host/events/${id}`,

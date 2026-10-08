@@ -8,13 +8,17 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * CORS is configured once in SecurityConfig's CorsConfigurationSource; a
+ * per-controller @CrossOrigin("*") duplicated and contradicted that policy.
+ */
 @RestController
 @RequestMapping("/api/events")
-@CrossOrigin("*")
 public class EventController {
 
     @Autowired
@@ -42,8 +46,13 @@ public class EventController {
 
         // Pass `false` for includeUnapproved so PENDING/REJECTED events are NEVER
         // shown on the Dashboard or Events catalog before Admin approval.
+        // Ended events are included only for admins (includeExpired = isAdmin).
+        // Sorted by event date, nearest first, with id as a stable tiebreaker so
+        // paging cannot shuffle rows that share a date.
         Page<Event> events = eventService.getAllEvents(
-                name, categoryId, PageRequest.of(page, size), isAdmin, false);
+                name, categoryId,
+                PageRequest.of(page, size, Sort.by("date").ascending().and(Sort.by("id").ascending())),
+                isAdmin, false);
         return ResponseEntity.ok(events);
     }
 

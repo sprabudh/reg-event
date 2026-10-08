@@ -6,10 +6,11 @@ import { REGISTRATION_STATUS } from '../constants';
  * host event detail pages.
  */
 export const filterAndSortAttendees = (attendees, searchTerm) => {
+    const needle = searchTerm.toLowerCase();
     const filtered = attendees.filter(
         (a) =>
-            a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            a.email.toLowerCase().includes(searchTerm.toLowerCase())
+            (a.name || '').toLowerCase().includes(needle) ||
+            (a.email || '').toLowerCase().includes(needle)
     );
 
     return [...filtered].sort((a, b) => {

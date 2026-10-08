@@ -31,11 +31,17 @@ const EventForm = () => {
     const [categories, setCategories] = useState([]);
     const [error, setError] = useState('');
     const [fieldErrors, setFieldErrors] = useState({});
+    const [isSaving, setIsSaving] = useState(false);
+    // Edit mode: null until the event has loaded. A failed load left an empty but
+    // fully submittable form, so saving would overwrite the event with blanks.
+    const [loadedId, setLoadedId] = useState(null);
 
     useEffect(() => {
         getCategories()
-            .then(res => setCategories(res.data))
-            .catch(() => console.error('Failed to load categories'));
+            .then(res => setCategories(res.data || []))
+            // Swallowed to console only, which left a required dropdown empty and
+            // unsatisfiable with no explanation.
+            .catch(() => setError(ERROR_MESSAGES.LOAD_CATEGORIES_FAILED));
 
         if (isEditMode) {
             const load = isHost ? getMyEventById(id) : getEventById(id);
@@ -56,7 +62,8 @@ const EventForm = () => {
                         category: event.category ? { id: event.category.id } : { id: '' }
                     });
                 })
-                .catch(() => setError(ERROR_MESSAGES.LOAD_EVENT_DETAILS_FAILED));
+                .catch(() => setError(ERROR_MESSAGES.LOAD_EVENT_DETAILS_FAILED))
+                .finally(() => setLoadedId(id));
         }
     }, [id, isEditMode, isHost]);
 
@@ -78,6 +85,10 @@ const EventForm = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (isSaving) return;
+        // Block saving until the event has loaded, otherwise an edit that raced
+        // the fetch would PUT an empty payload over the existing record.
+        if (isEditMode && loadedId !== id) return;
         setError('');
         setFieldErrors({});
 
@@ -91,6 +102,7 @@ const EventForm = () => {
             ? (isEditMode ? updateMyEvent(id, payload) : submitEvent(payload))
             : (isEditMode ? updateEvent(id, payload) : createEvent(payload));
 
+        setIsSaving(true);
         apiCall
             .then(() => navigate(backPath))
             .catch((err) => {
@@ -102,6 +114,7 @@ const EventForm = () => {
                 } else {
                     setError(getErrorMessage(err, ERROR_MESSAGES.SAVE_EVENT_FAILED(isEditMode ? 'update' : 'create')));
                 }
+                setIsSaving(false);
             });
     };
 
@@ -121,14 +134,22 @@ const EventForm = () => {
                     </div>
                 )}
 
-                {error && <div className="ef-error">{error}</div>}
+                {error && <div className="ef-error" role="alert">{error}</div>}
 
                 <form onSubmit={handleSubmit} className="ef-form" noValidate>
 
                     <Field label="Event Name" name="name" value={formData.name} onChange={handleChange} error={fieldErrors.name} required />
 
-                    <Field label="Event Category" name="category" value={formData.category.id} onChange={handleChange} error={fieldErrors['category.id'] || fieldErrors.category} required>
-                        <select name="category" value={formData.category.id} onChange={handleChange} className="ef-input" required>
+                    <Field label="Event Category" name="category" id="ef-category" value={formData.category.id} onChange={handleChange} error={fieldErrors['category.id'] || fieldErrors.category} required>
+                        <select
+                            name="category"
+                            id="ef-category"
+                            value={formData.category.id}
+                            onChange={handleChange}
+                            className="ef-input"
+                            required
+                            aria-invalid={fieldErrors['category.id'] || fieldErrors.category ? true : undefined}
+                        >
                             <option value="">Select a Category</option>
                             {categories.map((cat) => (
                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -149,13 +170,15 @@ const EventForm = () => {
                     <Field label="Price (Enter 0 for Free)" name="price" type="number" value={formData.price} onChange={handleChange} error={fieldErrors.price} placeholder="e.g., 50.00" min="0" step="0.01" required />
 
                     <div className="ef-checks-row">
+                        {/* The label sat beside the checkbox rather than wrapping
+                            it, so clicking the text did not toggle the control. */}
                         <div className="ef-check-item">
-                            <input type="checkbox" name="isOnline" checked={formData.isOnline} onChange={handleChange} className="ef-checkbox" />
-                            <label className="ef-check-label">Online Event</label>
+                            <input type="checkbox" id="ef-is-online" name="isOnline" checked={formData.isOnline} onChange={handleChange} className="ef-checkbox" />
+                            <label htmlFor="ef-is-online" className="ef-check-label">Online Event</label>
                         </div>
                         <div className="ef-check-item">
-                            <input type="checkbox" name="isRefundable" checked={formData.isRefundable} onChange={handleChange} className="ef-checkbox" />
-                            <label className="ef-check-label">Refundable</label>
+                            <input type="checkbox" id="ef-is-refundable" name="isRefundable" checked={formData.isRefundable} onChange={handleChange} className="ef-checkbox" />
+                            <label htmlFor="ef-is-refundable" className="ef-check-label">Refundable</label>
                         </div>
                     </div>
 
@@ -163,8 +186,10 @@ const EventForm = () => {
                         <Field label="Location" name="location" value={formData.location} onChange={handleChange} error={fieldErrors.location} placeholder="e.g., Convention Center, Hall A" />
                     )}
 
-                    <button type="submit" className="ef-btn">
-                        {isEditMode ? 'Save Changes' : isHost ? 'Submit for Approval' : 'Create Event'}
+                    <button type="submit" className="ef-btn" disabled={isSaving}>
+                        {isSaving
+                            ? 'Saving...'
+                            : isEditMode ? 'Save Changes' : isHost ? 'Submit for Approval' : 'Create Event'}
                     </button>
                 </form>
             </div>

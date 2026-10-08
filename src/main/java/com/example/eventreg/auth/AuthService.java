@@ -1,6 +1,7 @@
 package com.example.eventreg.auth;
 
 import com.example.eventreg.exception.AccountTypeMismatchException;
+import com.example.eventreg.exception.InvalidRefreshTokenException;
 import com.example.eventreg.security.JwtService;
 import com.example.eventreg.user.Role;
 import com.example.eventreg.user.User;
@@ -11,6 +12,12 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +27,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     /**
      * Domain hosts must sign up with. Configurable so it is not buried in
@@ -30,11 +38,13 @@ public class AuthService {
     private String hostEmailDomain;
 
     // Normal User Registration. Unchanged: still always Role.USER.
+    @Transactional
     public AuthModels.AuthenticationResponse register(AuthModels.RegisterRequest request) {
         return createAccount(request, Role.USER);
     }
 
     // Secret Admin Registration!
+    @Transactional
     public AuthModels.AuthenticationResponse registerAdmin(AuthModels.RegisterRequest request) {
         return createAccount(request, Role.ADMIN);
     }
@@ -42,10 +52,11 @@ public class AuthService {
     /**
      * Registration honouring an explicit accountType.
      *
-     * ATTENDEE and anything unrecognised both fall through to Role.USER, so
-     * this is a superset of register(...) and cannot change how existing
+     * ATTENDEE and anything unrecognised both fall through to Role.USER, so this
+     * is a superset of register(...) and cannot change how existing
      * attendee signups behave.
      */
+    @Transactional
     public AuthModels.AuthenticationResponse registerWithAccountType(AuthModels.RegisterRequest request) {
         return createAccount(request, resolveRegisterRole(request.getAccountType()));
     }
@@ -86,6 +97,7 @@ public class AuthService {
         }
     }
 
+    @Transactional
     public AuthModels.AuthenticationResponse authenticate(AuthModels.AuthenticationRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
@@ -120,18 +132,139 @@ public class AuthService {
     }
 
     /**
-     * Mints the JWT and pairs it with the caller's identity.
+     * Mints the token pair and pairs it with the caller's identity.
      *
      * Shared by all three auth entry points (register, register-admin,
-     * authenticate) so the response shape is defined in exactly one place.
+     * authenticate) plus refresh, so the response shape is defined in exactly
+     * one place.
      */
     private AuthModels.AuthenticationResponse toResponse(User user) {
+        return issueSession(user);
+    }
+
+    /**
+     * Issues an access/refresh pair and persists the refresh token's hash.
+     *
+     * Every login and every refresh goes through here, so a session always has
+     * exactly one server-side record and revocation has something to act on.
+     */
+    private AuthModels.AuthenticationResponse issueSession(User user) {
+        // Opportunistic cleanup, run only on login/refresh. Adding a scheduled
+        // task would mean a new background thread on startup, and signing in
+        // already touches this table.
+        //
+        // Swallowed deliberately: housekeeping must never be the reason a
+        // sign-in fails. A failed sweep only means dead rows linger a little
+        // longer, which is harmless.
+        try {
+            purgeExpiredTokens();
+        } catch (RuntimeException ignored) {
+            // Deliberately empty -- see above.
+        }
+
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        Instant now = Instant.now();
+        refreshTokenRepository.save(RefreshToken.builder()
+                .tokenHash(hash(refreshToken))
+                .userEmail(user.getEmail())
+                .issuedAt(now)
+                .expiresAt(now.plusMillis(jwtService.getRefreshExpirationMillis()))
+                .revoked(false)
+                .build());
+
         return AuthModels.AuthenticationResponse.builder()
                 .user(AuthModels.UserInfo.builder()
                         .role(user.getRole().name())
                         .name(user.getName())
                         .build())
-                .token(jwtService.generateToken(user))
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .expiresIn(jwtService.getAccessExpirationSeconds())
                 .build();
+    }
+
+    /**
+     * Exchanges a refresh token for a new pair, revoking the old one.
+     *
+     * Rotation is why "log out" and "refresh" can both actually end a session:
+     * every refresh retires the presented token, so a stolen copy is good for at
+     * most one use, and the legitimate client's next refresh is the one that
+     * succeeds.
+     */
+        @Transactional
+    public AuthModels.AuthenticationResponse refresh(AuthModels.RefreshRequest request) {
+        String presented = request.getRefreshToken();
+        RefreshToken stored = refreshTokenRepository.findByTokenHash(hash(presented))
+                .orElseThrow(() -> new InvalidRefreshTokenException(
+                        "Session expired. Please sign in again."));
+
+        if (!stored.isUsable(Instant.now())) {
+            // Expired, or already rotated away / revoked by a logout.
+            throw new InvalidRefreshTokenException("Session expired. Please sign in again.");
+        }
+        if (!jwtService.isTokenUsable(presented)) {
+            // The hash matched but the JWT itself no longer verifies: treat the
+            // session as gone rather than trusting the row.
+            stored.setRevoked(true);
+            refreshTokenRepository.save(stored);
+            throw new InvalidRefreshTokenException("Session expired. Please sign in again.");
+        }
+
+        stored.setRevoked(true);
+        refreshTokenRepository.save(stored);
+
+        var user = repository.findByEmail(stored.getUserEmail())
+                .orElseThrow(() -> new InvalidRefreshTokenException("Session expired. Please sign in again."));
+
+        return issueSession(user);
+    }
+
+    /**
+     * Ends a session.
+     *
+     * With a refresh token only that session dies; without one, every live
+     * session for the caller is revoked (the "sign out everywhere" case). Never
+     * throws: logging out with an already-dead token must still look successful
+     * to the client.
+     */
+    @Transactional
+    public void logout(String refreshToken, String callerEmail) {
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            refreshTokenRepository.findByTokenHash(hash(refreshToken))
+                    .ifPresent(token -> {
+                        token.setRevoked(true);
+                        refreshTokenRepository.save(token);
+                    });
+            return;
+        }
+        if (callerEmail != null && !callerEmail.isBlank()) {
+            refreshTokenRepository.deleteByUserEmailAndRevokedFalse(callerEmail);
+        }
+    }
+
+    /** Best-effort cleanup of sessions whose window has already closed. */
+    public int purgeExpiredTokens() {
+        return refreshTokenRepository.deleteExpired(Instant.now());
+    }
+
+    /**
+     * SHA-256, hex encoded. The plaintext token is never stored, so this is the
+     * only thing in the table that can be compared against an incoming token.
+     */
+    private String hash(String token) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(token.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                hex.append(Character.forDigit((b >> 4) & 0xF, 16));
+                hex.append(Character.forDigit(b & 0xF, 16));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
     }
 }

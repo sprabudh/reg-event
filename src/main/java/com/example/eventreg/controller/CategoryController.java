@@ -3,6 +3,7 @@ package com.example.eventreg.controller;
 import com.example.eventreg.entity.Category;
 import com.example.eventreg.repository.CategoryRepository;
 import com.example.eventreg.repository.EventRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,9 +11,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * CORS is configured once in SecurityConfig's CorsConfigurationSource. A
+ * per-controller @CrossOrigin("*") duplicated (and contradicted) that policy.
+ */
 @RestController
 @RequestMapping("/api/categories")
-@CrossOrigin("*")
 public class CategoryController {
 
     @Autowired
@@ -29,7 +33,7 @@ public class CategoryController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createCategory(@RequestBody Category category) {
+    public ResponseEntity<?> createCategory(@Valid @RequestBody Category category) {
         if (categoryRepository.existsByNameIgnoreCase(category.getName())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Category already exists");
         }

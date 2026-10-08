@@ -44,6 +44,14 @@ public class AttendeeService {
             throw new com.example.eventreg.exception.EventExpiredException("This event has ended. Registrations are closed.");
         }
 
+        // The UI hides the register form for PENDING/REJECTED events, but the API
+        // accepted registrations for them anyway -- which for a paid event meant
+        // invoices were issued for an event nobody can see.
+        if (!event.isVisibleToAttendees()) {
+            throw new com.example.eventreg.exception.ForbiddenOperationException(
+                    "This event is not open for registration.");
+        }
+
         if (attendeeRepository.existsByEmailAndEventId(attendee.getEmail(), eventId)) {
             throw new DuplicateRegistrationException("Registration failed: Email is already registered for this event");
         }
@@ -157,6 +165,13 @@ public class AttendeeService {
     }
 
     private void recordCancellation(Attendee attendee) {
+        // A waitlisted attendee was never charged, so there is nothing to refund
+        // or forfeit. Synthesising a PAID ₹0 row here made every paid event's
+        // refunds table list waitlist cancellations as "No Refund (Free)".
+        if (attendee.getStatus() == RegistrationStatus.WAITLISTED) {
+            return;
+        }
+
         paymentRepository.findByAttendeeId(attendee.getId()).ifPresentOrElse(
                 payment -> {
                     // FIX: Fetch a fresh event directly from the database via EventService.
@@ -254,27 +269,35 @@ public class AttendeeService {
      * recording and waitlist promotion -- side effects that must not happen for
      * a rejected request.
      */
+    /**
+     * Read-side counterpart of the deleteAttendee authorization rule, extracted so
+     * GET /attendees/{id} applies exactly the same check as DELETE.
+     */
+    public void assertCanManageAttendee(Long id, Role callerRole, String principalEmail, Long principalUserId) {
+        if (callerRole == Role.ADMIN) return;
+
+        Attendee attendee = getAttendeeById(id);
+        Long hostId = attendee.getEvent() == null
+                ? null
+                : attendee.getEvent().getHostedByUserId();
+        boolean isEventHost = callerRole == Role.HOST
+                && principalUserId != null
+                && principalUserId.equals(hostId);
+        boolean isOwnRegistration = principalEmail != null
+                && principalEmail.equalsIgnoreCase(attendee.getEmail());
+
+        if (!isEventHost && !isOwnRegistration) {
+            throw new NotYourRegistrationException(
+                    callerRole == Role.HOST
+                            ? "You can only view your own registration or manage registrations on events you host."
+                            : "You can only view your own registration.");
+        }
+    }
+
     @Transactional
     public void deleteAttendee(Long id, Role callerRole, String principalEmail, Long principalUserId) {
+        assertCanManageAttendee(id, callerRole, principalEmail, principalUserId);
         Attendee attendeeToDelete = getAttendeeById(id);
-
-        if (callerRole != Role.ADMIN) {
-            Long hostId = attendeeToDelete.getEvent() == null
-                    ? null
-                    : attendeeToDelete.getEvent().getHostedByUserId();
-            boolean isEventHost = callerRole == Role.HOST
-                    && principalUserId != null
-                    && principalUserId.equals(hostId);
-            boolean isOwnRegistration = principalEmail != null
-                    && principalEmail.equalsIgnoreCase(attendeeToDelete.getEmail());
-
-            if (!isEventHost && !isOwnRegistration) {
-                throw new NotYourRegistrationException(
-                        callerRole == Role.HOST
-                                ? "You can only cancel your own registration or manage registrations on events you host."
-                                : "You can only cancel your own registration.");
-            }
-        }
 
         Long eventId = attendeeToDelete.getEvent().getId();
         RegistrationStatus oldStatus = attendeeToDelete.getStatus();

@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,6 +39,12 @@ public class EventService {
         // Admin creates have no owning host, but host_name is still populated
         // so admin-hosted events (e.g. "DJ night") show a host instead of NULL.
         event.setHostName("Admin");
+        event.setHostedByUserId(null);
+        event.setApprovedByUserId(null);
+        event.setRejectionReason(null);
+        // The controller binds the raw entity, so a client-supplied id would make
+        // save() merge into -- and overwrite -- an existing row. Force an insert.
+        event.setId(null);
         return eventRepository.save(event);
     }
 
@@ -57,6 +64,9 @@ public class EventService {
         event.setApprovedByUserId(null);
         event.setApprovedAt(null);
         event.setRejectionReason(null);
+        // See createEvent: a client-supplied id would turn this into an update of
+        // someone else's event.
+        event.setId(null);
         return eventRepository.save(event);
     }
 
@@ -100,10 +110,16 @@ public class EventService {
 
         // Fetch ALL matches, filter out ended events, THEN apply pagination.
         // (Filtering after pagination incorrectly shrinks the page and total count.)
+        // Pageable.unpaged() carries no sort, so order explicitly here: nearest
+        // event date first, with id as a stable tiebreaker. Without this the
+        // attendee list came back in insertion order while the admin list was
+        // sorted by date, so the two pages disagreed on order.
         List<Event> all = eventRepository
                 .searchApprovedEvents(name, categoryId, ApprovalStatus.APPROVED, Pageable.unpaged())
                 .getContent().stream()
                 .filter(event -> !event.isExpired())
+                .sorted(Comparator.comparing(Event::getDate)
+                        .thenComparing(Event::getId))
                 .collect(Collectors.toList());
 
         int start = (int) Math.min(pageable.getOffset(), all.size());

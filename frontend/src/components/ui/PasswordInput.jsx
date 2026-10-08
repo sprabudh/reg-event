@@ -26,16 +26,19 @@ const PasswordInput = ({
                     type="button"
                     className="au-toggle-btn"
                     onClick={() => setVisible((v) => !v)}
-                    tabIndex="-1"
+                    // tabIndex="-1" made this unreachable by keyboard, so the
+                    // password could only be revealed with a mouse.
+                    aria-pressed={visible}
+                    aria-label={visible ? 'Hide password' : 'Show password'}
                     style={isAdmin ? { color: '#ffc107' } : undefined}
                 >
                     {visible ? 'Hide' : 'Show'}
                 </button>
             </div>
 
-            {/* FIX: Don't show the pink box for password mismatch, because matchState handles it below */}
+            {/* Password mismatch is not shown here: matchState renders it just below. */}
             {error && error !== ERROR_MESSAGES.PASSWORD_MISMATCH && (
-                <div className={isAdmin ? 'ar-format-feedback' : 'au-format-feedback'}>
+                <div role="alert" className={isAdmin ? 'ar-format-feedback' : 'au-format-feedback'}>
                     {error}
                 </div>
             )}

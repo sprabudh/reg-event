@@ -71,10 +71,10 @@ public class AuthModels {
     }
 
     /**
-     * The identity behind the token. Kept as its own object so the client
-     * receives { "token": "eyJ...", "user": { "role": ..., "name": ... } }
-     * rather than three sibling keys -- role and name describe the user, the
-     * token is the credential.
+     * The identity behind the session. Kept as its own object so the client
+     * receives { "user": { "role": ..., "name": ... }, "accessToken": ...,
+     * "refreshToken": ... } rather than sibling loose keys -- role and name
+     * describe the user, the tokens are the credentials.
      */
     @Data
     @Builder
@@ -87,25 +87,55 @@ public class AuthModels {
     }
 
     /**
-     * Auth responses from /register, /register-admin and /authenticate.
+     * Auth responses from /register, /register-admin, /authenticate and /refresh.
      *
      * Serializes as:
-     *   {  { "role": ..., "name": ... }, "token": "eyJ..." }
+     *   { "user": { "role": ..., "name": ... },
+     *     "accessToken": "eyJ...", "refreshToken": "eyJ...",
+     *     "expiresIn": 900 }
      *
-     * @JsonPropertyOrder pins the key order. Jackson's default depends on
-     * getter-introspection order, which is not something the client should
-     * ever have to care about -- declare it so the wire format is stable.
+     * accessToken is the short-lived credential sent as `Authorization: Bearer`.
+     * refreshToken is long-lived and is only ever posted back to /api/auth/refresh
+     * to obtain a fresh pair. expiresIn is the access token's remaining lifetime in
+     * seconds, so the client can refresh proactively instead of waiting for a 401.
      *
-     * token stays a plain String on purpose: it is sent verbatim as
-     * `Authorization: Bearer <token>`, so it must remain a scalar.
+     * Both stay plain Strings on purpose: each is sent verbatim as a bearer value
+     * or as a JSON field, so both must remain scalars.
      */
     @Data
     @Builder
     @AllArgsConstructor
     @NoArgsConstructor
-    @JsonPropertyOrder({ "user", "token" })
+    @JsonPropertyOrder({ "user", "accessToken", "refreshToken", "expiresIn" })
     public static class AuthenticationResponse {
         private UserInfo user;
-        private String token;
+        private String accessToken;
+        private String refreshToken;
+
+        /** Access-token lifetime in seconds. Advisory: the client may ignore it. */
+        private Long expiresIn;
+    }
+
+    /** Body of POST /api/auth/refresh. */
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class RefreshRequest {
+        @NotBlank(message = "Refresh token is required")
+        private String refreshToken;
+    }
+
+    /** Body of POST /api/auth/logout. */
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class LogoutRequest {
+        /**
+         * Optional. When supplied, only that session is ended; when omitted every
+         * live session for the caller is revoked.
+         */
+        private String refreshToken;
     }
 }
